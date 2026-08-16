@@ -207,6 +207,11 @@ class MapPlugin:
             ],
             "default_center": map_cfg.get("default_center", [49.4, 17.95]),
             "default_zoom": map_cfg.get("default_zoom", 9),
+            # Padding (in pixels) applied to fitBounds calls. CSS-shorthand order:
+            # [top, right, bottom, left]. Asymmetric values shift the visual
+            # center — e.g. `[30, 30, 120, 30]` pushes the content upward,
+            # useful when the map has UI overlays at the bottom.
+            "fit_padding": map_cfg.get("fit_padding", [30, 30, 30, 30]),
             # When true, re-fit the map to the visible markers after each
             # `krizky-filters:update` (including the initial URL-driven filter).
             # Default false = view stays put on filter changes.

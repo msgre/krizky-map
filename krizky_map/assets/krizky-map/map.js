@@ -75,7 +75,7 @@
     var initialBounds = safeBounds(el.dataset.mapBounds);
 
     var map = L.map(el);
-    if (initialBounds) map.fitBounds(initialBounds, { padding: [30, 30], maxZoom: 12 });
+    if (initialBounds) map.fitBounds(initialBounds, fitOpts(cfg, 12));
     else map.setView(cfg.default_center || [49.4, 17.95], cfg.default_zoom || 9);
 
     addTile(map, cfg);
@@ -123,7 +123,7 @@
       applyFilter(layerGroup, slugToMarker, allSlugs, visible);
       if (panelHooks && panelHooks.count) panelHooks.count.textContent = String(recs.length);
       // Optional: re-fit the map on filter update (skip when 0 visible markers).
-      if (cfg.fit_on_filter) fitVisible(map, slugToMarker, visible);
+      if (cfg.fit_on_filter) fitVisible(map, slugToMarker, visible, cfg);
     }
 
     document.addEventListener('krizky-filters:update', function (e) {
@@ -332,14 +332,25 @@
     });
   }
 
-  function fitVisible(map, slugToMarker, visible) {
+  function fitVisible(map, slugToMarker, visible, cfg) {
     var latlngs = [];
     Object.keys(visible).forEach(function (s) {
       var m = slugToMarker[s];
       if (m && m.getLatLng) latlngs.push(m.getLatLng());
     });
     if (!latlngs.length) return;   // (a) — 0 markers = leave view alone.
-    map.fitBounds(L.latLngBounds(latlngs), { padding: [30, 30], maxZoom: 15 });
+    map.fitBounds(L.latLngBounds(latlngs), fitOpts(cfg, 15));
+  }
+
+  // Translate config fit_padding (CSS-order: [top, right, bottom, left])
+  // to Leaflet's paddingTopLeft / paddingBottomRight (each in [x, y] order).
+  function fitOpts(cfg, maxZoom) {
+    var p = cfg.fit_padding || [30, 30, 30, 30];
+    return {
+      paddingTopLeft: [p[3], p[0]],       // [left, top]
+      paddingBottomRight: [p[1], p[2]],   // [right, bottom]
+      maxZoom: maxZoom,
+    };
   }
 
   // ------------------------------------------------------------------

@@ -312,6 +312,17 @@ def test_fit_on_filter_coerces_truthy_to_bool():
     assert plugin._runtime_map_config({"fit_on_filter": ""})["fit_on_filter"] is False
 
 
+def test_fit_padding_default_symmetric():
+    plugin = MapPlugin()
+    assert plugin._runtime_map_config({})["fit_padding"] == [30, 30, 30, 30]
+
+
+def test_fit_padding_asymmetric_override():
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({"fit_padding": [30, 30, 120, 30]})
+    assert cfg["fit_padding"] == [30, 30, 120, 30]
+
+
 def test_after_page_written_skips_detail_pages(tmp_path):
     """Detail pages get data inlined into data-* attrs, no geojson needed."""
     plugin = MapPlugin()
