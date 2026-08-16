@@ -71,6 +71,21 @@ def _page_map_cfg(page_cfg: dict) -> dict | None:
     return {} if m is True else dict(m)
 
 
+def _panel_config(panel_cfg: dict) -> dict:
+    """Normalize the map_full side-panel config with defaults.
+
+    Only ``thumbnail_field`` is user-required for photos; the rest have sane
+    defaults matching krizky-photos conventions (zero-pad 3, size "thumb",
+    format "jpg" — matches ``_normalize_base_name`` in the photos plugin).
+    """
+    return {
+        "thumbnail_field": panel_cfg.get("thumbnail_field"),
+        "thumbnail_size": panel_cfg.get("thumbnail_size", "thumb"),
+        "thumbnail_format": panel_cfg.get("thumbnail_format", "jpg"),
+        "thumbnail_pad": panel_cfg.get("thumbnail_pad", 3),
+    }
+
+
 def _label_field(markers_cfg: dict) -> str | None:
     """Resolve the display label field for a category.
 
@@ -103,6 +118,7 @@ class MapPlugin:
     def __init__(self) -> None:
         self._assets_copied: set[str] = set()
         self._config_dir: Path | None = None
+        self._photos_base_url: str = ""
 
     # ------------------------------------------------------------------
     # prepare_jinja2_environment
@@ -123,6 +139,9 @@ class MapPlugin:
                     [loaders[0], FileSystemLoader(str(_PLUGIN_TEMPLATES))] + loaders[1:]
                 )
         map_cfg = config.get("site", {}).get("map", {}) or {}
+        # krizky-photos base URL — needed for panel thumbnail composition.
+        photos_cfg = config.get("sources", {}).get("photos", {}) or {}
+        self._photos_base_url = (photos_cfg.get("base_url") or "").rstrip("/")
         # Register public URLs for mask + overlays now (before render). The actual
         # file copy happens in after_page_written when output_dir is known.
         self._register_data_urls(map_cfg)
@@ -195,6 +214,10 @@ class MapPlugin:
                 # icon already indicates the type. None = only the title is shown.
                 "subtitle_field": (map_cfg.get("popup", {}) or {}).get("subtitle_field"),
             },
+            "panel": _panel_config(map_cfg.get("panel", {}) or {}),
+            # Photo base URL — reused from krizky-photos config so map_full panel
+            # can build thumbnail URLs the same way krizky-filters does.
+            "photos_base_url": self._photos_base_url,
         }
 
     # ------------------------------------------------------------------
@@ -260,16 +283,19 @@ class MapPlugin:
         site_map = config.get("site", {}).get("map", {}) or {}
         markers_cfg = site_map.get("markers", {}) or {}
         popup_cfg = site_map.get("popup", {}) or {}
+        panel_cfg = site_map.get("panel", {}) or {}
         lat_field = page_map.get("lat_field") or markers_cfg.get("lat_field") or DEFAULT_LAT_FIELD
         lng_field = page_map.get("lng_field") or markers_cfg.get("lng_field") or DEFAULT_LNG_FIELD
         # Auto-include fields that the plugin references implicitly:
         # - category_field / label_field: for marker icon + display name
         # - popup.subtitle_field: for popup subtitle in list/full mode
+        # - panel.thumbnail_field: for map_full panel photo composition
         cat_field = markers_cfg.get("category_field")
         label_field = _label_field(markers_cfg)
         subtitle_field = popup_cfg.get("subtitle_field")
+        thumb_field = panel_cfg.get("thumbnail_field")
         fields = list(page_map.get("fields") or ())
-        for extra in (cat_field, label_field, subtitle_field):
+        for extra in (cat_field, label_field, subtitle_field, thumb_field):
             if extra and extra not in fields:
                 fields.append(extra)
         fields = fields or None    # None = fall back to DEFAULT_FIELDS in geojson.py

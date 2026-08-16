@@ -58,6 +58,16 @@ site:
       # properties, i když ho neuvedeš v `map.fields`.
       subtitle_field: umisteni
 
+    # Side panel v map_full (foto po kliknutí na marker).
+    # Thumbnail URL se skládá jako `sources.photos.base_url + paddedRow + _size.format`
+    # — stejná konvence jako `data-field-photo` v krizky-filters + _karta_filter.html.
+    # Focal point (object-position) se aplikuje pokud je krizky-photos aktivní.
+    panel:
+      thumbnail_field: id_radku      # sloupec s číslem řádku (rowId)
+      thumbnail_size: thumb          # varianta z sources.photos.sizes (default "thumb")
+      thumbnail_format: jpg          # default "jpg"
+      thumbnail_pad: 3               # zero-pad width (default 3)
+
     # Volitelná maska (tmavá výplň mimo polygon)
     mask:
       polygon: ./data/valassko.geojson   # relativní ke config.yaml

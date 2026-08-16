@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from krizky_map.plugin import MapPlugin, _label_field, _resolve_tile
+from krizky_map.plugin import MapPlugin, _label_field, _panel_config, _resolve_tile
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +175,56 @@ def test_runtime_map_config_subtitle_defaults_to_none():
     plugin = MapPlugin()
     cfg = plugin._runtime_map_config({})
     assert cfg["popup"]["subtitle_field"] is None
+
+
+# ---------------------------------------------------------------------------
+# panel.thumbnail (map_full side panel photo)
+# ---------------------------------------------------------------------------
+
+def test_panel_config_defaults():
+    cfg = _panel_config({})
+    assert cfg == {
+        "thumbnail_field": None,
+        "thumbnail_size": "thumb",
+        "thumbnail_format": "jpg",
+        "thumbnail_pad": 3,
+    }
+
+
+def test_panel_config_user_overrides():
+    cfg = _panel_config({
+        "thumbnail_field": "id_radku",
+        "thumbnail_size": "medium",
+        "thumbnail_format": "webp",
+        "thumbnail_pad": 4,
+    })
+    assert cfg["thumbnail_field"] == "id_radku"
+    assert cfg["thumbnail_size"] == "medium"
+    assert cfg["thumbnail_format"] == "webp"
+    assert cfg["thumbnail_pad"] == 4
+
+
+def test_runtime_map_config_exposes_panel_and_photos_base_url(tmp_path):
+    plugin = MapPlugin()
+    # Simulate prepare_jinja2_environment side effect (photos base url resolved).
+    plugin._photos_base_url = "https://photos.example.com"
+    cfg = plugin._runtime_map_config({"panel": {"thumbnail_field": "id_radku"}})
+    assert cfg["panel"]["thumbnail_field"] == "id_radku"
+    assert cfg["photos_base_url"] == "https://photos.example.com"
+
+
+def test_after_page_written_adds_thumbnail_field_to_properties(tmp_path):
+    """panel.thumbnail_field is auto-included in geojson properties."""
+    plugin = MapPlugin()
+    records = [{"slug": "a", "nazev": "A", "id_radku": 7,
+                "latitude": 49.5, "longitude": 17.9}]
+    plugin.after_page_written(
+        page_cfg={"map": {"fields": ["nazev"]}},
+        html_path="/x.html", output_dir=tmp_path, records=records,
+        config=_config({"panel": {"thumbnail_field": "id_radku"}}),
+    )
+    props = json.loads((tmp_path / "maps" / "x.geojson").read_text())["features"][0]["properties"]
+    assert props["id_radku"] == 7
 
 
 def test_after_page_written_respects_explicit_label_field(tmp_path):

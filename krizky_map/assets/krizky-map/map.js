@@ -227,10 +227,12 @@
     var loc = escHtml(props.location || props.umisteni || '');
     var labelField = cfg.markers.category_label_field || cfg.markers.category_field;
     var cat = props.category || (labelField ? props[labelField] : null);
-    var thumb = props.thumbnail || props.thumbnail_url;
-    var focal = props.focal_point ? ';object-position:' + escAttr(props.focal_point) : '';
+    var thumb = buildThumb(props, cfg);
     var html = '';
-    if (thumb) html += '<div class="k-panel-thumb"><img src="' + escAttr(thumb) + '" alt="" style="' + focal + '"></div>';
+    if (thumb) {
+      var focalStyle = thumb.focal ? ' style="object-position:' + escAttr(thumb.focal) + '"' : '';
+      html += '<div class="k-panel-thumb"><img src="' + escAttr(thumb.src) + '" alt=""' + focalStyle + '></div>';
+    }
     if (loc) html += '<div class="k-panel-loc mono">' + loc + '</div>';
     html += '<h3 class="k-panel-name">' + name + '</h3>';
     if (cat) html += '<p class="k-panel-cat muted">' + escHtml(cat) + '</p>';
@@ -241,6 +243,28 @@
     if (window.matchMedia('(pointer:coarse)').matches && hooks.panel) {
       hooks.panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }
+
+  // Compose a thumbnail URL from krizky-photos base_url + row number.
+  // Uses the same conventions as _karta_filter.html in krizky-filters:
+  // `{baseUrl}/{paddedRow}_{size}.{format}`. Adds focal_point when available.
+  function buildThumb(props, cfg) {
+    var panel = cfg.panel || {};
+    var field = panel.thumbnail_field;
+    var baseUrl = cfg.photos_base_url;
+    if (!field || !baseUrl) return null;
+    var rowId = props[field];
+    if (rowId == null || rowId === '') return null;
+    var pad = panel.thumbnail_pad || 3;
+    var size = panel.thumbnail_size || 'thumb';
+    var fmt = panel.thumbnail_format || 'jpg';
+    var padded = String(rowId).padStart(pad, '0');
+    var src = baseUrl + '/' + padded + '_' + size + '.' + fmt;
+    var focal = null;
+    if (window.krizkyPhotos && window.krizkyPhotos.focalPoints) {
+      focal = window.krizkyPhotos.focalPoints[padded] || null;
+    }
+    return { src: src, focal: focal };
   }
 
   function hookLocateBtn(map, btn) {
