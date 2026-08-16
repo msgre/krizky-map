@@ -62,19 +62,6 @@
   display: block;
   transition: transform .12s ease-out;
 }
-
-/* Active marker (popup open in list mode / clicked in full mode).
-   Barva se řídí konfigurací `markers.active_color` — když je nastavena,
-   plugin ji vloží jako inline CSS var `--marker-active-color`. Bez configu
-   aktivní marker zachová barvu default markeru, jen se zvětší. */
-.k-marker-active { z-index: 1000 !important; }
-.k-marker-active .k-marker-wrap {
-  transform: scale(1.25);
-  transform-origin: center bottom;
-}
-.k-marker-active .k-marker-body {
-  background: var(--marker-active-color, var(--marker-color, #850000));
-}
 .k-marker .k-marker-body {
   position: absolute;
   inset: 0;
@@ -97,6 +84,20 @@
   height: 55%;
   color: #F2EFE9;
   pointer-events: none;
+}
+
+/* Active marker (popup open in list mode / clicked in full mode).
+   Musí být DEFINOVÁNO PO `.k-marker .k-marker-body` — obě pravidla mají
+   stejnou specificitu (0-0-2-0), rozhoduje pořadí. Barva se řídí konfigurací
+   `markers.active_color` (inline CSS var `--marker-active-color`); bez configu
+   aktivní marker zachová barvu default markeru, jen se zvětší. */
+.k-marker-active { z-index: 1000 !important; }
+.k-marker-active .k-marker-wrap {
+  transform: scale(1.25);
+  transform-origin: center bottom;
+}
+.k-marker-active .k-marker-body {
+  background: var(--marker-active-color, var(--marker-color, #850000));
 }
 
 /* — cluster —
