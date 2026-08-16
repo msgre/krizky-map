@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "krizky-map"
+version = "0.1.0"
+description = "Leaflet-based map plugin for krizky static site generator"
+requires-python = ">=3.12"
+dependencies = [
+    "krizky>=0.1",
+]
+
+[project.entry-points."krizky"]
+map = "krizky_map.plugin:plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["krizky_map"]
+
+[tool.uv.sources]
+krizky = { git = "https://github.com/msgre/krizky.git" }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]

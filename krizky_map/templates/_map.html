@@ -1,0 +1,122 @@
+{# =================================================================
+   _map.html — makra pluginu krizky-map
+
+   Použití v šabloně:
+     {% from "_map.html" import map_detail, map_list, map_full %}
+
+   Všechna makra jsou plně opt-in. Vytváří ``<div class="krizky-map">``
+   s data-attributes, které map.js vyzvedne a inicializuje Leaflet.
+
+   Bez JS se nezobrazí (viz <noscript> pravidla v map.css).
+================================================================= #}
+
+
+{# — společné: config → JSON pro JS — #}
+{% macro _map_root(mode, extra_data, height, class_extra="") -%}
+{%- set cfg_json = map_config | tojson -%}
+<div class="krizky-map krizky-map-{{ mode }}{% if class_extra %} {{ class_extra }}{% endif %}"
+     data-map-mode="{{ mode }}"
+     data-map-config='{{ cfg_json }}'
+     {%- if height %} style="height:{{ height }}"{% endif %}
+     {%- for k, v in extra_data.items() %} data-map-{{ k }}="{{ v }}"{% endfor %}>
+  <noscript><p class="krizky-map-noscript">Pro zobrazení mapy je potřeba mít v prohlížeči zapnutý JavaScript.</p></noscript>
+</div>
+{%- endmacro %}
+
+
+{# — map_detail —
+   Malá mapa s jedním pinem.
+
+   Parametry:
+     record      – aktuální DB záznam (musí obsahovat latitude, longitude)
+     height      – CSS výška (default "360px")
+     category    – kategorie pro ikonu markeru (default: record[markers.category_field])
+     lat_field   – jméno GPS-lat pole (default "latitude")
+     lng_field   – jméno GPS-lng pole (default "longitude")
+     zoom        – přiblížení (default 15)
+     name_field  – pole pro popup title (default "nazev")
+#}
+{% macro map_detail(record, height="360px", category=none, lat_field="latitude", lng_field="longitude", zoom=15, name_field="nazev") -%}
+{%- set lat = record[lat_field] -%}
+{%- set lng = record[lng_field] -%}
+{%- if lat is not none and lng is not none -%}
+{%- set cat_field = map_config.markers.category_field -%}
+{%- set cat_value = category if category is not none else (record.get(cat_field) if cat_field else none) -%}
+{{ _map_root("detail", {
+    "lat": lat,
+    "lng": lng,
+    "zoom": zoom,
+    "name": record[name_field]|default("", boolean=true),
+    "category": cat_value|default("", boolean=true),
+}, height) }}
+{%- endif -%}
+{%- endmacro %}
+
+
+{# — map_list —
+   Mapa nad výpisem míst; typicky na kategorie / stitek / obdobi stránkách.
+   Data pochází z /maps/<stem>.geojson (generuje plugin při buildu).
+   Bounds pro fitBounds jsou spočítány server-side (viz records), aby se
+   mapa nezaskákávala při inicializaci.
+
+   Parametry:
+     records  – aktuální list záznamů (typicky filtered)
+     src      – URL geojsonu (default odvozeno z html_path stránky)
+     height   – CSS výška (default "360px")
+     cluster  – true/false, přebíjí globální default (default true)
+#}
+{% macro map_list(records, src=none, height="360px", cluster=true) -%}
+{%- set _src = src or _derive_map_src() -%}
+{%- set bounds = map_bounds(records) -%}
+{{ _map_root("list", {
+    "src": _src,
+    "bounds": bounds|tojson if bounds else "",
+    "cluster": "1" if cluster else "0",
+}, height) }}
+{%- endmacro %}
+
+
+{# — map_full —
+   Celostránková mapa se side panelem (thumbnail + jméno + odkaz po kliknutí).
+   Kliknutí na pin naplní panel; na mobilu se panel scrolluje do view.
+   Locate button (geolocation API) je součástí panelu.
+
+   Parametry:
+     records         – aktuální list záznamů (typicky filtered)
+     src             – URL geojsonu (default odvozeno z html_path)
+     height          – CSS výška (default "calc(100vh - 60px)")
+     cluster         – true/false (default true)
+     locate_button   – true/false, zobrazit tlačítko (default true)
+     panel_label     – nadpis panelu (default "Mapa míst")
+     panel_hint      – hint text (default "Klikněte na špendlík pro detail místa.")
+#}
+{% macro map_full(records, src=none, height="calc(100vh - 60px)", cluster=true, locate_button=true, panel_label="Mapa míst", panel_hint="Klikněte na špendlík pro detail místa.") -%}
+{%- set _src = src or _derive_map_src() -%}
+{%- set bounds = map_bounds(records) -%}
+<div class="krizky-map-full-wrap" style="height:{{ height }}">
+  {{ _map_root("full", {
+      "src": _src,
+      "bounds": bounds|tojson if bounds else "",
+      "cluster": "1" if cluster else "0",
+  }, none, class_extra="krizky-map-full-map") }}
+  <aside class="krizky-map-panel" data-map-panel>
+    <h2 class="krizky-map-panel-title">{{ panel_label }}</h2>
+    <p class="krizky-map-panel-count muted"><span data-map-count>{{ records|length }}</span> zmapovaných míst</p>
+    <p class="krizky-map-panel-hint" data-map-hint>{{ panel_hint }}</p>
+    <div class="krizky-map-panel-detail" data-map-detail hidden></div>
+    {%- if locate_button %}
+    <div class="krizky-map-panel-locate">
+      <button type="button" class="krizky-map-locate-btn" data-map-locate>Zobrazit moji polohu</button>
+    </div>
+    {%- endif %}
+  </aside>
+</div>
+{%- endmacro %}
+
+
+{# — helper: odvození src z page_name (raw path); falls back to /maps/index.geojson — #}
+{% macro _derive_map_src() -%}
+{%- set path = page_urls[page_name] if page_name and page_name in page_urls else "/index.html" -%}
+{%- set stem = path.rsplit("/", 1)[-1].rsplit(".", 1)[0] -%}
+/maps/{{ stem }}.geojson
+{%- endmacro %}

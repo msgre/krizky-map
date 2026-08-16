@@ -1,0 +1,153 @@
+/* krizky-map — layout + markery.
+ *
+ * Design tokeny se dědí z projektu (--surface, --hairline, --muted, --ink, --radius, --mono).
+ * Bez nich komponenta funguje s prostými fallbacky.
+ */
+
+/* — kontejnery — */
+.krizky-map { position: relative; }
+.krizky-map-detail,
+.krizky-map-list { width: 100%; border-radius: var(--radius, 4px); overflow: hidden; }
+
+.krizky-map-full-wrap {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 0;
+}
+.krizky-map-full-map { width: 100%; height: 100%; }
+
+.krizky-map-panel {
+  padding: var(--s5, 20px);
+  background: var(--surface, #FAF8F3);
+  border-left: 1px solid var(--hairline, #DED8CE);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3, 12px);
+}
+.krizky-map-panel-title { margin: 0; font-size: 1.1rem; }
+.krizky-map-panel-count { font-size: .85rem; color: var(--muted, #6E665E); margin: 0; }
+.krizky-map-panel-hint { font-size: .88rem; color: var(--muted, #6E665E); margin: 0; }
+.krizky-map-panel-detail { display: flex; flex-direction: column; gap: 6px; }
+.krizky-map-panel-locate { margin-top: auto; padding-top: var(--s5, 20px); }
+.krizky-map-locate-btn {
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: 1px solid var(--hairline, #DED8CE);
+  border-radius: var(--radius, 4px);
+  color: var(--ink, #221E1C);
+  font-size: .88rem;
+  cursor: pointer;
+}
+.krizky-map-locate-btn:hover { border-color: var(--muted, #6E665E); }
+
+@media (max-width: 760px) {
+  .krizky-map-full-wrap { grid-template-columns: 1fr; grid-template-rows: 60vh auto; }
+  .krizky-map-panel { border-left: 0; border-top: 1px solid var(--hairline, #DED8CE); }
+}
+
+/* — noscript fallback — */
+.krizky-map-noscript {
+  padding: var(--s5, 20px);
+  color: var(--muted, #6E665E);
+  font-size: .9rem;
+  text-align: center;
+  background: var(--surface, #FAF8F3);
+}
+
+/* — marker: kapka nebo kruh + ikona uvnitř — */
+.k-marker .k-marker-wrap {
+  position: relative;
+  display: block;
+}
+.k-marker .k-marker-body {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #F2EFE9;
+  box-shadow: 0 1px 3px rgba(31, 36, 33, .4);
+  background: var(--marker-color, #850000);
+}
+.k-marker-drop .k-marker-body {
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+.k-marker-circle .k-marker-body {
+  border-radius: 50%;
+}
+.k-marker .k-marker-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 55%;
+  height: 55%;
+  color: #F2EFE9;
+  pointer-events: none;
+}
+
+/* — cluster — */
+.k-cluster {
+  display: flex; align-items: center; justify-content: center;
+  color: #F2EFE9;
+  font-weight: 600; font-size: .82rem;
+  border-radius: 50%;
+  background: rgba(133, 0, 0, .85);
+  border: 2px solid #F2EFE9;
+  box-shadow: 0 2px 6px rgba(31, 36, 33, .3);
+}
+.k-cluster-m { background: rgba(133, 0, 0, .9); font-size: .9rem; }
+.k-cluster-l { background: rgba(94, 0, 0, .95); font-size: .95rem; }
+.k-cluster span { line-height: 1; }
+
+/* — popup — */
+.leaflet-popup-content .k-popup { min-width: 160px; }
+.k-popup-name { font-weight: 600; margin-bottom: 4px; color: var(--ink, #221E1C); }
+.k-popup-cat {
+  font-family: var(--mono, monospace);
+  font-size: .74rem;
+  color: var(--muted, #6E665E);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 6px;
+}
+.k-popup-link {
+  display: inline-block;
+  font-size: .85rem;
+  color: var(--ink, #221E1C);
+  text-decoration: underline;
+}
+
+/* — mask blur (0-8 px) — */
+.k-mask-blur-1 { filter: blur(1px); }
+.k-mask-blur-2 { filter: blur(2px); }
+.k-mask-blur-3 { filter: blur(3px); }
+.k-mask-blur-4 { filter: blur(4px); }
+.k-mask-blur-5 { filter: blur(5px); }
+
+/* — full mode panel content — */
+.k-panel-thumb img {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius, 4px);
+  display: block;
+}
+.k-panel-loc {
+  font-size: .74rem;
+  color: var(--muted, #6E665E);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.k-panel-name { margin: 4px 0; font-size: 1rem; }
+.k-panel-cat { font-size: .85rem; margin: 0 0 var(--s4, 16px); }
+.k-panel-link {
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 8px 14px;
+  border: 1px solid var(--hairline, #DED8CE);
+  border-radius: 100px;
+  color: var(--ink, #221E1C);
+  font-size: .85rem;
+  text-decoration: none;
+}
+.k-panel-link:hover { border-color: var(--muted, #6E665E); }

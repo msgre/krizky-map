@@ -1,0 +1,301 @@
+/* krizky-map — Leaflet init for [data-map-mode] elements.
+ *
+ * Modes:
+ *   detail — single pin, popup with name (+ category), no cluster.
+ *   list   — fetch geojson, cluster, popup with name + category + detail link.
+ *   full   — fetch geojson, cluster, side panel, optional locate button.
+ *
+ * Bez cross-plugin závislosti — filter integration je opt-in (listen na
+ * `krizky-filters:update`); pokud filter není přítomen, mapa zobrazí vše.
+ */
+(function () {
+  'use strict';
+
+  document.querySelectorAll('[data-map-mode]').forEach(init);
+
+  function init(el) {
+    if (typeof L === 'undefined') { console.warn('Leaflet not loaded'); return; }
+    var mode = el.dataset.mapMode;
+    var cfg = safeJson(el.dataset.mapConfig) || {};
+    if (mode === 'detail') initDetail(el, cfg);
+    else if (mode === 'list' || mode === 'full') initListOrFull(el, cfg, mode);
+  }
+
+  function safeJson(s) { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function safeBounds(s) {
+    var b = safeJson(s);
+    return (b && b.length === 2 && b[0].length === 2 && b[1].length === 2) ? b : null;
+  }
+
+  // ------------------------------------------------------------------
+  // Detail: single pin, no cluster
+  // ------------------------------------------------------------------
+  function initDetail(el, cfg) {
+    var lat = parseFloat(el.dataset.mapLat);
+    var lng = parseFloat(el.dataset.mapLng);
+    if (!isFinite(lat) || !isFinite(lng)) return;
+
+    var zoom = parseInt(el.dataset.mapZoom, 10) || 15;
+    var name = el.dataset.mapName || '';
+    var category = el.dataset.mapCategory || '';
+
+    var map = L.map(el, { scrollWheelZoom: false }).setView([lat, lng], zoom);
+    addTile(map, cfg);
+    addMask(map, cfg);
+    addOverlays(map, cfg);
+
+    var marker = L.marker([lat, lng], { icon: buildIcon(cfg.markers, category) }).addTo(map);
+    marker.bindPopup(popupHtml({ name: name, category: category }, cfg, { link: false }));
+  }
+
+  // ------------------------------------------------------------------
+  // List / Full: geojson fetch, cluster, popup or panel
+  // ------------------------------------------------------------------
+  function initListOrFull(el, cfg, mode) {
+    var src = el.dataset.mapSrc;
+    if (!src) { console.warn('krizky-map: missing data-map-src'); return; }
+
+    var wantCluster = el.dataset.mapCluster !== '0' && typeof L.markerClusterGroup === 'function';
+    var initialBounds = safeBounds(el.dataset.mapBounds);
+
+    var map = L.map(el);
+    if (initialBounds) map.fitBounds(initialBounds, { padding: [30, 30], maxZoom: 12 });
+    else map.setView(cfg.default_center || [49.4, 17.95], cfg.default_zoom || 9);
+
+    addTile(map, cfg);
+    addMask(map, cfg);
+    addOverlays(map, cfg);
+
+    var layerGroup = wantCluster ? L.markerClusterGroup(clusterOpts(cfg)) : L.layerGroup();
+    map.addLayer(layerGroup);
+
+    // Full-mode side panel (optional).
+    var panelHooks = mode === 'full' ? findPanelHooks(el) : null;
+    if (panelHooks && panelHooks.locateBtn) hookLocateBtn(map, panelHooks.locateBtn);
+
+    // Fetch geojson, build markers, register filter listener.
+    fetch(src)
+      .then(function (r) { return r.json(); })
+      .then(function (fc) {
+        var slugToMarker = {};
+        var allSlugs = [];
+        (fc.features || []).forEach(function (f) {
+          var props = f.properties || {};
+          var coords = f.geometry && f.geometry.coordinates;
+          if (!coords || coords.length < 2) return;
+          var lat = coords[1], lng = coords[0];
+          var slug = props.slug;
+          var m = L.marker([lat, lng], { icon: buildIcon(cfg.markers, props[cfg.markers.category_field]) });
+          m.on('click', function () {
+            if (panelHooks) fillPanel(panelHooks, props, cfg);
+            else m.bindPopup(popupHtml(props, cfg, { link: true })).openPopup();
+          });
+          layerGroup.addLayer(m);
+          if (slug) { slugToMarker[slug] = m; allSlugs.push(slug); }
+        });
+
+        // Filter integration: hide/show markers based on filtered set.
+        document.addEventListener('krizky-filters:update', function (e) {
+          var recs = (e.detail && e.detail.filteredRecords) || [];
+          var visible = {};
+          recs.forEach(function (r) { if (r && r.slug) visible[r.slug] = 1; });
+          applyFilter(layerGroup, slugToMarker, allSlugs, visible);
+          if (panelHooks && panelHooks.count) panelHooks.count.textContent = String(recs.length);
+        });
+      })
+      .catch(function (e) { console.error('krizky-map: failed to load ' + src, e); });
+  }
+
+  // ------------------------------------------------------------------
+  // Marker + cluster styling
+  // ------------------------------------------------------------------
+  function buildIcon(markers, category) {
+    markers = markers || {};
+    var shape = markers.shape === 'circle' ? 'circle' : 'drop';
+    var size = markers.size || 32;
+    var color = markers.color || '#850000';
+    var iconId = null;
+    if (markers.icon_prefix && category) iconId = markers.icon_prefix + category;
+    else if (markers.fallback_icon) iconId = markers.fallback_icon;
+
+    var inner = iconId
+      ? '<svg class="k-marker-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#' + escAttr(iconId) + '"/></svg>'
+      : '';
+    var html = '<span class="k-marker-body"></span>' + inner;
+    var anchor = shape === 'drop' ? [size / 2, size] : [size / 2, size / 2];
+    return L.divIcon({
+      className: 'k-marker k-marker-' + shape,
+      html: '<div class="k-marker-wrap" style="--marker-color:' + escAttr(color) + ';width:' + size + 'px;height:' + size + 'px">' + html + '</div>',
+      iconSize: [size, size],
+      iconAnchor: anchor,
+      popupAnchor: [0, -size],
+    });
+  }
+
+  function clusterOpts(cfg) {
+    var c = cfg.cluster || {};
+    return {
+      showCoverageOnHover: false,
+      maxClusterRadius: c.max_radius || 50,
+      disableClusteringAtZoom: c.disable_at_zoom || 14,
+      spiderfyOnMaxZoom: true,
+      iconCreateFunction: function (cluster) {
+        var n = cluster.getChildCount();
+        var size = n >= 50 ? 48 : (n >= 10 ? 40 : 32);
+        var cls = n >= 50 ? 'l' : (n >= 10 ? 'm' : 's');
+        return L.divIcon({
+          html: '<span>' + n + '</span>',
+          className: 'k-cluster k-cluster-' + cls,
+          iconSize: [size, size],
+        });
+      },
+    };
+  }
+
+  // ------------------------------------------------------------------
+  // Popup
+  // ------------------------------------------------------------------
+  function popupHtml(props, cfg, opts) {
+    var link = opts && opts.link;
+    var name = escHtml(props.name || props.nazev || '');
+    var cat = props.category || props[cfg.markers.category_field];
+    var out = '<div class="k-popup">';
+    out += '<div class="k-popup-name">' + name + '</div>';
+    if (cat) out += '<div class="k-popup-cat">' + escHtml(cat) + '</div>';
+    if (link && props.slug) {
+      out += '<a class="k-popup-link" href="/' + escAttr(props.slug) + '.html">Otevřít detail</a>';
+    }
+    out += '</div>';
+    return out;
+  }
+
+  // ------------------------------------------------------------------
+  // Side panel (full mode)
+  // ------------------------------------------------------------------
+  function findPanelHooks(mapEl) {
+    var wrap = mapEl.closest('.krizky-map-full-wrap');
+    if (!wrap) return null;
+    return {
+      panel: wrap.querySelector('[data-map-panel]'),
+      detail: wrap.querySelector('[data-map-detail]'),
+      hint: wrap.querySelector('[data-map-hint]'),
+      count: wrap.querySelector('[data-map-count]'),
+      locateBtn: wrap.querySelector('[data-map-locate]'),
+    };
+  }
+
+  function fillPanel(hooks, props, cfg) {
+    if (!hooks.detail) return;
+    var name = escHtml(props.name || props.nazev || '');
+    var loc = escHtml(props.location || props.umisteni || '');
+    var cat = props.category || props[cfg.markers.category_field];
+    var thumb = props.thumbnail || props.thumbnail_url;
+    var focal = props.focal_point ? ';object-position:' + escAttr(props.focal_point) : '';
+    var html = '';
+    if (thumb) html += '<div class="k-panel-thumb"><img src="' + escAttr(thumb) + '" alt="" style="' + focal + '"></div>';
+    if (loc) html += '<div class="k-panel-loc mono">' + loc + '</div>';
+    html += '<h3 class="k-panel-name">' + name + '</h3>';
+    if (cat) html += '<p class="k-panel-cat muted">' + escHtml(cat) + '</p>';
+    if (props.slug) html += '<a class="k-panel-link" href="/' + escAttr(props.slug) + '.html">Otevřít detail</a>';
+    hooks.detail.innerHTML = html;
+    hooks.detail.hidden = false;
+    if (hooks.hint) hooks.hint.hidden = true;
+    if (window.matchMedia('(pointer:coarse)').matches && hooks.panel) {
+      hooks.panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function hookLocateBtn(map, btn) {
+    var userMarker = null, userCircle = null;
+    btn.addEventListener('click', function () {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var lat = pos.coords.latitude, lng = pos.coords.longitude;
+        if (userMarker) map.removeLayer(userMarker);
+        if (userCircle) map.removeLayer(userCircle);
+        userCircle = L.circle([lat, lng], {
+          radius: pos.coords.accuracy,
+          color: '#4CAF50', fillColor: '#4CAF50', fillOpacity: 0.1, weight: 1,
+        }).addTo(map);
+        userMarker = L.circleMarker([lat, lng], {
+          radius: 8, color: '#4CAF50', fillColor: '#4CAF50', fillOpacity: 0.9, weight: 2,
+        }).addTo(map).bindPopup('Vaše poloha').openPopup();
+        map.setView([lat, lng], 13);
+      }, function () { /* denied / unavailable */ });
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Filter apply
+  // ------------------------------------------------------------------
+  function applyFilter(layer, slugToMarker, allSlugs, visible) {
+    allSlugs.forEach(function (s) {
+      var m = slugToMarker[s];
+      if (!m) return;
+      var shouldShow = visible[s];
+      var has = layer.hasLayer(m);
+      if (shouldShow && !has) layer.addLayer(m);
+      else if (!shouldShow && has) layer.removeLayer(m);
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Tile / mask / overlays
+  // ------------------------------------------------------------------
+  function addTile(map, cfg) {
+    var t = cfg.tile || {};
+    if (!t.url) return;
+    L.tileLayer(t.url, {
+      attribution: t.attribution || '',
+      subdomains: t.subdomains && t.subdomains.length ? t.subdomains : 'abc',
+      maxZoom: t.max_zoom || 19,
+    }).addTo(map);
+  }
+
+  function addMask(map, cfg) {
+    var m = cfg.mask;
+    if (!m || !m.url) return;
+    fetch(m.url).then(function (r) { return r.json(); }).then(function (data) {
+      var geom = data.geometry || data;
+      if (!geom || geom.type !== 'Polygon') return;
+      var coords = geom.coordinates[0];
+      var worldBounds = [[90, -180], [90, 180], [-90, 180], [-90, -180], [90, -180]];
+      var hole = coords.map(function (c) { return [c[1], c[0]]; }).reverse();
+      L.polygon([worldBounds, hole], {
+        color: 'transparent',
+        fillColor: m.fill_color || '#000000',
+        fillOpacity: m.fill_opacity || 0.3,
+        interactive: false,
+        className: m.blur ? 'k-mask-blur k-mask-blur-' + m.blur : '',
+      }).addTo(map);
+    }).catch(function () { /* ignore */ });
+  }
+
+  function addOverlays(map, cfg) {
+    (cfg.overlays || []).forEach(function (ov) {
+      if (!ov.url) return;
+      var style = ov.style || {};
+      fetch(ov.url).then(function (r) { return r.json(); }).then(function (data) {
+        L.geoJSON(data, {
+          pointToLayer: function (f, ll) {
+            if (style.type === 'circle') return L.circleMarker(ll, style);
+            return L.marker(ll);
+          },
+          style: function () { return style; },
+        }).addTo(map);
+      }).catch(function () { /* ignore */ });
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Utils
+  // ------------------------------------------------------------------
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function escAttr(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+})();
