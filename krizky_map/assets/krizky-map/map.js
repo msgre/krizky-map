@@ -87,12 +87,31 @@
     var panelHooks = mode === 'full' ? findPanelHooks(el) : null;
     if (panelHooks && panelHooks.locateBtn) hookLocateBtn(map, panelHooks.locateBtn);
 
-    // Fetch geojson, build markers, register filter listener.
+    // Filter integration: listener must be registered BEFORE fetch so that
+    // an early event from krizky-filters (initial URL state) is captured even
+    // when its JSON loads faster than ours. We queue the last event until
+    // markers exist, then apply it.
+    var slugToMarker = {};
+    var allSlugs = [];
+    var markersReady = false;
+    var pendingEvent = null;
+
+    function applyEvent(e) {
+      var recs = (e.detail && e.detail.filteredRecords) || [];
+      var visible = {};
+      recs.forEach(function (r) { if (r && r.slug) visible[r.slug] = 1; });
+      applyFilter(layerGroup, slugToMarker, allSlugs, visible);
+      if (panelHooks && panelHooks.count) panelHooks.count.textContent = String(recs.length);
+    }
+
+    document.addEventListener('krizky-filters:update', function (e) {
+      if (markersReady) applyEvent(e);
+      else pendingEvent = e;  // Only the latest one matters — filter re-computes on every change.
+    });
+
     fetch(src)
       .then(function (r) { return r.json(); })
       .then(function (fc) {
-        var slugToMarker = {};
-        var allSlugs = [];
         (fc.features || []).forEach(function (f) {
           var props = f.properties || {};
           var coords = f.geometry && f.geometry.coordinates;
@@ -112,15 +131,8 @@
           layerGroup.addLayer(m);
           if (slug) { slugToMarker[slug] = m; allSlugs.push(slug); }
         });
-
-        // Filter integration: hide/show markers based on filtered set.
-        document.addEventListener('krizky-filters:update', function (e) {
-          var recs = (e.detail && e.detail.filteredRecords) || [];
-          var visible = {};
-          recs.forEach(function (r) { if (r && r.slug) visible[r.slug] = 1; });
-          applyFilter(layerGroup, slugToMarker, allSlugs, visible);
-          if (panelHooks && panelHooks.count) panelHooks.count.textContent = String(recs.length);
-        });
+        markersReady = true;
+        if (pendingEvent) { applyEvent(pendingEvent); pendingEvent = null; }
       })
       .catch(function (e) { console.error('krizky-map: failed to load ' + src, e); });
   }
