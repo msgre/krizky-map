@@ -189,6 +189,12 @@ class MapPlugin:
             # `krizky-filters:update` (including the initial URL-driven filter).
             # Default false = view stays put on filter changes.
             "fit_on_filter": bool(map_cfg.get("fit_on_filter", False)),
+            "popup": {
+                # Column shown under the title in popup bubbles (list / detail modes).
+                # Typically the place location — more useful than category when the
+                # icon already indicates the type. None = only the title is shown.
+                "subtitle_field": (map_cfg.get("popup", {}) or {}).get("subtitle_field"),
+            },
         }
 
     # ------------------------------------------------------------------
@@ -253,14 +259,17 @@ class MapPlugin:
 
         site_map = config.get("site", {}).get("map", {}) or {}
         markers_cfg = site_map.get("markers", {}) or {}
+        popup_cfg = site_map.get("popup", {}) or {}
         lat_field = page_map.get("lat_field") or markers_cfg.get("lat_field") or DEFAULT_LAT_FIELD
         lng_field = page_map.get("lng_field") or markers_cfg.get("lng_field") or DEFAULT_LNG_FIELD
-        # Ensure category_field (slug, for icon lookup) and label_field (display
-        # name, for popup) end up in properties even when the user forgot them.
+        # Auto-include fields that the plugin references implicitly:
+        # - category_field / label_field: for marker icon + display name
+        # - popup.subtitle_field: for popup subtitle in list/full mode
         cat_field = markers_cfg.get("category_field")
         label_field = _label_field(markers_cfg)
+        subtitle_field = popup_cfg.get("subtitle_field")
         fields = list(page_map.get("fields") or ())
-        for extra in (cat_field, label_field):
+        for extra in (cat_field, label_field, subtitle_field):
             if extra and extra not in fields:
                 fields.append(extra)
         fields = fields or None    # None = fall back to DEFAULT_FIELDS in geojson.py

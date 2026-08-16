@@ -15,7 +15,10 @@ from krizky_map.plugin import _PLUGIN_TEMPLATES, MapPlugin
 def env():
     e = Environment(loader=ChoiceLoader([FileSystemLoader(str(_PLUGIN_TEMPLATES))]), autoescape=True)
     plugin = MapPlugin()
-    map_cfg = {"markers": {"category_field": "kategorie_slug", "icon_prefix": "i-kategorie-"}}
+    map_cfg = {
+        "markers": {"category_field": "kategorie_slug", "icon_prefix": "i-kategorie-"},
+        "popup": {"subtitle_field": "umisteni"},
+    }
     e.globals["map_config"] = plugin._runtime_map_config(map_cfg)
     e.globals["map_bounds"] = lambda rs: bounds_from_feature_collection(build_feature_collection(rs or [], None))
     e.globals["page_urls"] = {"vsechna_mista": "/vsechna-mista.html", "mapa": "/mapa.html"}
@@ -30,15 +33,39 @@ def env():
 def test_map_detail_renders_data_attrs(env):
     tmpl = env.from_string(
         '{% from "_map.html" import map_detail %}'
-        '{{ map_detail({"latitude": 49.5, "longitude": 17.9, "nazev": "Kříž", "kategorie_slug": "kriz"}) }}'
+        '{{ map_detail({"latitude": 49.5, "longitude": 17.9, "nazev": "Kříž u Muzika",'
+        '                "kategorie_slug": "kriz", "umisteni": "Krhová"}) }}'
     )
     out = tmpl.render()
     assert 'data-map-mode="detail"' in out
     assert 'data-map-lat="49.5"' in out
     assert 'data-map-lng="17.9"' in out
-    assert 'data-map-name="Kříž"' in out
+    assert 'data-map-name="Kříž u Muzika"' in out
+    # category = slug (icon lookup); subtitle = display text under title in popup.
     assert 'data-map-category="kriz"' in out
+    assert 'data-map-subtitle="Krhová"' in out
     assert 'style="height:360px"' in out
+
+
+def test_map_detail_subtitle_absent_when_field_missing(env):
+    """Bez subtitle field v recordu je data-map-subtitle prázdný."""
+    tmpl = env.from_string(
+        '{% from "_map.html" import map_detail %}'
+        '{{ map_detail({"latitude": 49.5, "longitude": 17.9, "nazev": "X", "kategorie_slug": "kriz"}) }}'
+    )
+    out = tmpl.render()
+    assert 'data-map-subtitle=""' in out
+
+
+def test_map_detail_explicit_subtitle(env):
+    tmpl = env.from_string(
+        '{% from "_map.html" import map_detail %}'
+        '{{ map_detail({"latitude": 49.5, "longitude": 17.9, "nazev": "X"},'
+        '              category="kriz", subtitle="Vlastní popisek") }}'
+    )
+    out = tmpl.render()
+    assert 'data-map-category="kriz"' in out
+    assert 'data-map-subtitle="Vlastní popisek"' in out
 
 
 def test_map_detail_missing_coords_renders_nothing(env):

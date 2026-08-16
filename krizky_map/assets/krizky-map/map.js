@@ -48,7 +48,9 @@
 
     var zoom = parseInt(el.dataset.mapZoom, 10) || 15;
     var name = el.dataset.mapName || '';
+    // `category` = slug (for icon lookup); `subtitle` = text under title in popup.
     var category = el.dataset.mapCategory || '';
+    var subtitle = el.dataset.mapSubtitle || '';
 
     var map = L.map(el, { scrollWheelZoom: false }).setView([lat, lng], zoom);
     addTile(map, cfg);
@@ -56,7 +58,7 @@
     addOverlays(map, cfg);
 
     var marker = L.marker([lat, lng], { icon: buildIcon(cfg.markers, category) }).addTo(map);
-    marker.bindPopup(popupHtml({ name: name, category: category }, cfg, { link: false }));
+    marker.bindPopup(popupHtml({ nazev: name, subtitle: subtitle }, cfg, { link: false }));
   }
 
   // ------------------------------------------------------------------
@@ -191,12 +193,12 @@
   function popupHtml(props, cfg, opts) {
     var link = opts && opts.link;
     var name = escHtml(props.name || props.nazev || '');
-    // category_label_field = display name; category_field = slug (fallback).
-    var labelField = cfg.markers.category_label_field || cfg.markers.category_field;
-    var cat = props.category || (labelField ? props[labelField] : null);
+    // Subtitle: explicit props.subtitle (detail mode) → props[popup.subtitle_field] (list/full).
+    var subField = cfg.popup && cfg.popup.subtitle_field;
+    var subtitle = props.subtitle || (subField ? props[subField] : null);
     var out = '<div class="k-popup">';
     out += '<div class="k-popup-name">' + name + '</div>';
-    if (cat) out += '<div class="k-popup-cat">' + escHtml(cat) + '</div>';
+    if (subtitle) out += '<div class="k-popup-subtitle">' + escHtml(subtitle) + '</div>';
     if (link && props.slug) {
       out += '<a class="k-popup-link" href="/' + escAttr(props.slug) + '.html">Otevřít detail</a>';
     }

@@ -102,7 +102,7 @@
 /* — popup — */
 .leaflet-popup-content .k-popup { min-width: 160px; }
 .k-popup-name { font-weight: 600; margin-bottom: 4px; color: var(--ink, #221E1C); }
-.k-popup-cat {
+.k-popup-subtitle {
   font-family: var(--mono, monospace);
   font-size: .74rem;
   color: var(--muted, #6E665E);

@@ -28,26 +28,32 @@
    Malá mapa s jedním pinem.
 
    Parametry:
-     record      – aktuální DB záznam (musí obsahovat latitude, longitude)
-     height      – CSS výška (default "360px")
-     category    – kategorie pro ikonu markeru (default: record[markers.category_field])
-     lat_field   – jméno GPS-lat pole (default "latitude")
-     lng_field   – jméno GPS-lng pole (default "longitude")
-     zoom        – přiblížení (default 15)
-     name_field  – pole pro popup title (default "nazev")
+     record       – aktuální DB záznam (musí obsahovat latitude, longitude)
+     height       – CSS výška (default "360px")
+     category     – slug pro výběr ikony markeru
+                    (default: record[markers.category_field])
+     subtitle     – text pod nadpisem v popupu
+                    (default: record[popup.subtitle_field])
+     lat_field    – jméno GPS-lat pole (default "latitude")
+     lng_field    – jméno GPS-lng pole (default "longitude")
+     zoom         – přiblížení (default 15)
+     name_field   – pole pro popup title (default "nazev")
 #}
-{% macro map_detail(record, height="360px", category=none, lat_field="latitude", lng_field="longitude", zoom=15, name_field="nazev") -%}
+{% macro map_detail(record, height="360px", category=none, subtitle=none, lat_field="latitude", lng_field="longitude", zoom=15, name_field="nazev") -%}
 {%- set lat = record[lat_field] -%}
 {%- set lng = record[lng_field] -%}
 {%- if lat is not none and lng is not none -%}
 {%- set cat_field = map_config.markers.category_field -%}
-{%- set cat_value = category if category is not none else (record.get(cat_field) if cat_field else none) -%}
+{%- set subtitle_field = map_config.popup.subtitle_field -%}
+{%- set cat_slug = category if category is not none else (record.get(cat_field) if cat_field else none) -%}
+{%- set sub_value = subtitle if subtitle is not none else (record.get(subtitle_field) if subtitle_field else none) -%}
 {{ _map_root("detail", {
     "lat": lat,
     "lng": lng,
     "zoom": zoom,
     "name": record[name_field]|default("", boolean=true),
-    "category": cat_value|default("", boolean=true),
+    "category": cat_slug|default("", boolean=true),
+    "subtitle": sub_value|default("", boolean=true),
 }, height) }}
 {%- endif -%}
 {%- endmacro %}

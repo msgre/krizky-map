@@ -151,6 +151,32 @@ def test_after_page_written_adds_category_field_to_properties(tmp_path):
     assert props["kategorie"] == "Kříž"
 
 
+def test_after_page_written_adds_subtitle_field_to_properties(tmp_path):
+    """popup.subtitle_field is auto-included in geojson properties."""
+    plugin = MapPlugin()
+    records = [{"slug": "a", "nazev": "A", "umisteni": "Krhová",
+                "latitude": 49.5, "longitude": 17.9}]
+    plugin.after_page_written(
+        page_cfg={"map": {"fields": ["nazev"]}},
+        html_path="/x.html", output_dir=tmp_path, records=records,
+        config=_config({"popup": {"subtitle_field": "umisteni"}}),
+    )
+    props = json.loads((tmp_path / "maps" / "x.geojson").read_text())["features"][0]["properties"]
+    assert props["umisteni"] == "Krhová"
+
+
+def test_runtime_map_config_exposes_subtitle_field():
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({"popup": {"subtitle_field": "umisteni"}})
+    assert cfg["popup"]["subtitle_field"] == "umisteni"
+
+
+def test_runtime_map_config_subtitle_defaults_to_none():
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({})
+    assert cfg["popup"]["subtitle_field"] is None
+
+
 def test_after_page_written_respects_explicit_label_field(tmp_path):
     """User can override auto-derive with markers.category_label_field."""
     plugin = MapPlugin()

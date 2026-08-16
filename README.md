@@ -51,6 +51,13 @@ site:
       max_radius: 50
       disable_at_zoom: 14
 
+    # Obsah popup bubliny
+    popup:
+      # Sloupec, který se v popupu zobrazí pod nadpisem (např. umístění místa).
+      # None (default) = jen nadpis. Plugin auto-přidá tento sloupec do geojson
+      # properties, i když ho neuvedeš v `map.fields`.
+      subtitle_field: umisteni
+
     # Volitelná maska (tmavá výplň mimo polygon)
     mask:
       polygon: ./data/valassko.geojson   # relativní ke config.yaml
