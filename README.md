@@ -97,6 +97,8 @@ site:
     # Padding v pixelech pro fitBounds — CSS shorthand: [top, right, bottom, left].
     # Asymetrické hodnoty posouvají obsah v mapě (např. [30, 30, 120, 30] posune
     # obsah nahoru, hodí se když má viewport dole nějaké UI). Default symetrický.
+    # Per-widget override je možný přes parametr makra:
+    #     {{ map_full(filtered, fit_padding=[30, 30, 120, 30]) }}
     fit_padding: [30, 30, 30, 30]
 
     # Cesty k lokálním asstům (uživatel stáhne Leaflet do svého assets/)

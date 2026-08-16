@@ -142,6 +142,33 @@ def test_map_list_cluster_off(env):
     assert 'data-map-cluster="0"' in tmpl.render()
 
 
+def test_map_list_fit_padding_empty_by_default(env):
+    tmpl = env.from_string(
+        '{% from "_map.html" import map_list %}'
+        '{{ map_list([]) }}'
+    )
+    assert 'data-map-fit-padding=""' in tmpl.render()
+
+
+def test_map_list_fit_padding_serialized_when_passed(env):
+    tmpl = env.from_string(
+        '{% from "_map.html" import map_list %}'
+        '{{ map_list([], fit_padding=[30, 30, 120, 30]) }}'
+    )
+    out = tmpl.render().replace('&#34;', '"').replace('&quot;', '"')
+    assert 'data-map-fit-padding="[30, 30, 120, 30]"' in out
+
+
+def test_map_full_fit_padding_param(env):
+    env.globals["page_name"] = "mapa"
+    tmpl = env.from_string(
+        '{% from "_map.html" import map_full %}'
+        '{{ map_full([], fit_padding=[10, 10, 100, 10]) }}'
+    )
+    out = tmpl.render().replace('&#34;', '"').replace('&quot;', '"')
+    assert 'data-map-fit-padding="[10, 10, 100, 10]"' in out
+
+
 # ---------------------------------------------------------------------------
 # map_full
 # ---------------------------------------------------------------------------
