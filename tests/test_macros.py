@@ -72,7 +72,8 @@ def test_map_detail_custom_height_and_zoom(env):
 # map_list
 # ---------------------------------------------------------------------------
 
-def test_map_list_renders_src_and_bounds(env):
+def test_map_list_renders_empty_src_and_bounds(env):
+    """Bez explicitního `src` je data-map-src prázdný — JS ho odvodí z location."""
     tmpl = env.from_string(
         '{% from "_map.html" import map_list %}'
         '{{ map_list(records) }}'
@@ -83,7 +84,7 @@ def test_map_list_renders_src_and_bounds(env):
     ]
     out = tmpl.render(records=records)
     assert 'data-map-mode="list"' in out
-    assert 'data-map-src="/maps/vsechna-mista.geojson"' in out
+    assert 'data-map-src=""' in out
     # bounds must be encoded as JSON array with autoescape (&#34; is escaped ")
     assert '[[49.5,' in out.replace('&#34;', '"').replace('&quot;', '"')
 
@@ -128,7 +129,7 @@ def test_map_full_renders_wrap_and_panel(env):
     out = tmpl.render(records=records)
     assert 'krizky-map-full-wrap' in out
     assert 'data-map-mode="full"' in out
-    assert 'data-map-src="/maps/mapa.geojson"' in out
+    assert 'data-map-src=""' in out
     assert 'krizky-map-panel' in out
     assert 'data-map-locate' in out
     assert 'data-map-count' in out

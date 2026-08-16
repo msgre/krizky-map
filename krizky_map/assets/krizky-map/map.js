@@ -14,9 +14,15 @@
   document.querySelectorAll('[data-map-mode]').forEach(init);
 
   function init(el) {
-    if (typeof L === 'undefined') { console.warn('Leaflet not loaded'); return; }
+    if (typeof L === 'undefined') {
+      console.error('krizky-map: Leaflet not loaded. Check that <script src="…leaflet.js"> resolves and site.map.leaflet.js in config is correct.');
+      return;
+    }
     var mode = el.dataset.mapMode;
     var cfg = safeJson(el.dataset.mapConfig) || {};
+    if (!cfg.tile || !cfg.tile.url) {
+      console.error('krizky-map: no tile URL in map_config. Check site.map.tile.provider or set custom tile.url in config.');
+    }
     if (mode === 'detail') initDetail(el, cfg);
     else if (mode === 'list' || mode === 'full') initListOrFull(el, cfg, mode);
   }
@@ -25,6 +31,11 @@
   function safeBounds(s) {
     var b = safeJson(s);
     return (b && b.length === 2 && b[0].length === 2 && b[1].length === 2) ? b : null;
+  }
+  function deriveSrc() {
+    // /kategorie-socha.html → /maps/kategorie-socha.geojson
+    var stem = window.location.pathname.split('/').pop().replace(/\.html?$/i, '');
+    return stem ? '/maps/' + stem + '.geojson' : '';
   }
 
   // ------------------------------------------------------------------
@@ -52,8 +63,11 @@
   // List / Full: geojson fetch, cluster, popup or panel
   // ------------------------------------------------------------------
   function initListOrFull(el, cfg, mode) {
-    var src = el.dataset.mapSrc;
-    if (!src) { console.warn('krizky-map: missing data-map-src'); return; }
+    // Derive geojson URL from current pathname when template didn't set it —
+    // works reliably for dynamic paths (e.g. /{{ category.slug }}.html) where
+    // the SSR helper can't render the final stem.
+    var src = el.dataset.mapSrc || deriveSrc();
+    if (!src) { console.warn('krizky-map: could not resolve geojson URL'); return; }
 
     var wantCluster = el.dataset.mapCluster !== '0' && typeof L.markerClusterGroup === 'function';
     var initialBounds = safeBounds(el.dataset.mapBounds);

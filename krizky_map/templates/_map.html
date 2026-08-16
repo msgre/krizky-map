@@ -66,10 +66,9 @@
      cluster  – true/false, přebíjí globální default (default true)
 #}
 {% macro map_list(records, src=none, height="360px", cluster=true) -%}
-{%- set _src = src or _derive_map_src() -%}
 {%- set bounds = map_bounds(records) -%}
 {{ _map_root("list", {
-    "src": _src,
+    "src": src or "",
     "bounds": bounds|tojson if bounds else "",
     "cluster": "1" if cluster else "0",
 }, height) }}
@@ -91,11 +90,10 @@
      panel_hint      – hint text (default "Klikněte na špendlík pro detail místa.")
 #}
 {% macro map_full(records, src=none, height="calc(100vh - 60px)", cluster=true, locate_button=true, panel_label="Mapa míst", panel_hint="Klikněte na špendlík pro detail místa.") -%}
-{%- set _src = src or _derive_map_src() -%}
 {%- set bounds = map_bounds(records) -%}
 <div class="krizky-map-full-wrap" style="height:{{ height }}">
   {{ _map_root("full", {
-      "src": _src,
+      "src": src or "",
       "bounds": bounds|tojson if bounds else "",
       "cluster": "1" if cluster else "0",
   }, none, class_extra="krizky-map-full-map") }}
@@ -114,9 +112,7 @@
 {%- endmacro %}
 
 
-{# — helper: odvození src z page_name (raw path); falls back to /maps/index.geojson — #}
-{% macro _derive_map_src() -%}
-{%- set path = page_urls[page_name] if page_name and page_name in page_urls else "/index.html" -%}
-{%- set stem = path.rsplit("/", 1)[-1].rsplit(".", 1)[0] -%}
-/maps/{{ stem }}.geojson
-{%- endmacro %}
+{# `_derive_map_src` byl odstraněn: nefungoval pro dynamic paths (např.
+   `/{{ category.slug }}.html`), protože v SSR nemá rendered URL. JS to teď
+   řeší v runtime přes `window.location.pathname` (viz map.js::deriveSrc).
+   Šablona může stále dodat explicitní `src=…` a přebít default. #}
