@@ -89,6 +89,24 @@
     var panelHooks = mode === 'full' ? findPanelHooks(el) : null;
     if (panelHooks && panelHooks.locateBtn) hookLocateBtn(map, panelHooks.locateBtn);
 
+    // Active marker highlight — one marker at a time is "active" (popup open
+    // in list mode, or last clicked in full mode). CSS class `k-marker-active`
+    // lets projects style the highlight (default: subtle scale + higher z-index).
+    var activeMarker = null;
+    function setActive(m) {
+      if (activeMarker === m) return;
+      clearActive();
+      activeMarker = m;
+      var elm = m.getElement && m.getElement();
+      if (elm) elm.classList.add('k-marker-active');
+    }
+    function clearActive() {
+      if (!activeMarker) return;
+      var elm = activeMarker.getElement && activeMarker.getElement();
+      if (elm) elm.classList.remove('k-marker-active');
+      activeMarker = null;
+    }
+
     // Filter integration: listener must be registered BEFORE fetch so that
     // an early event from krizky-filters (initial URL state) is captured even
     // when its JSON loads faster than ours. We queue the last event until
@@ -125,12 +143,17 @@
           var m = L.marker([lat, lng], { icon: buildIcon(cfg.markers, props[cfg.markers.category_field]) });
           if (panelHooks) {
             // Full mode: side panel replaces popup.
-            m.on('click', function () { fillPanel(panelHooks, props, cfg); });
+            m.on('click', function () {
+              setActive(m);
+              fillPanel(panelHooks, props, cfg);
+            });
           } else {
             // List mode: bind popup once at construction time so Leaflet handles
             // toggle (open/close on click) itself — binding inside a click handler
             // would fight the built-in toggle and only work on first click.
             m.bindPopup(popupHtml(props, cfg, { link: true }));
+            m.on('popupopen', function () { setActive(m); });
+            m.on('popupclose', function () { if (activeMarker === m) clearActive(); });
           }
           layerGroup.addLayer(m);
           if (slug) { slugToMarker[slug] = m; allSlugs.push(slug); }

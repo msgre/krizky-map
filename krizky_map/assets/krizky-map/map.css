@@ -60,6 +60,16 @@
 .k-marker .k-marker-wrap {
   position: relative;
   display: block;
+  transition: transform .12s ease-out;
+}
+
+/* Active marker (popup open in list mode / clicked in full mode).
+   Default = scale + higher z-index. Barvu si projekt přebije v svém stylopisu
+   (typicky `.k-marker-active .k-marker-body { background: … }`). */
+.k-marker-active { z-index: 1000 !important; }
+.k-marker-active .k-marker-wrap {
+  transform: scale(1.25);
+  transform-origin: center bottom;
 }
 .k-marker .k-marker-body {
   position: absolute;
