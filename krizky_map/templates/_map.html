@@ -71,12 +71,13 @@
      height   – CSS výška (default "360px")
      cluster  – true/false, přebíjí globální default (default true)
 #}
-{% macro map_list(records, src=none, height="360px", cluster=true) -%}
+{% macro map_list(records, src=none, height="360px", cluster=true, fit_padding=none) -%}
 {%- set bounds = map_bounds(records) -%}
 {{ _map_root("list", {
     "src": src or "",
     "bounds": bounds|tojson if bounds else "",
     "cluster": "1" if cluster else "0",
+    "fit-padding": fit_padding|tojson if fit_padding else "",
 }, height) }}
 {%- endmacro %}
 
@@ -95,13 +96,14 @@
      panel_label     – nadpis panelu (default "Mapa míst")
      panel_hint      – hint text (default "Klikněte na špendlík pro detail místa.")
 #}
-{% macro map_full(records, src=none, height="calc(100vh - 60px)", cluster=true, locate_button=true, panel_label="Mapa míst", panel_hint="Klikněte na špendlík pro detail místa.") -%}
+{% macro map_full(records, src=none, height="calc(100vh - 60px)", cluster=true, locate_button=true, panel_label="Mapa míst", panel_hint="Klikněte na špendlík pro detail místa.", fit_padding=none) -%}
 {%- set bounds = map_bounds(records) -%}
 <div class="krizky-map-full-wrap" style="height:{{ height }}">
   {{ _map_root("full", {
       "src": src or "",
       "bounds": bounds|tojson if bounds else "",
       "cluster": "1" if cluster else "0",
+      "fit-padding": fit_padding|tojson if fit_padding else "",
   }, none, class_extra="krizky-map-full-map") }}
   <aside class="krizky-map-panel" data-map-panel>
     <h2 class="krizky-map-panel-title">{{ panel_label }}</h2>

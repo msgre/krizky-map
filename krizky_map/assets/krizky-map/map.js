@@ -74,6 +74,13 @@
     var wantCluster = el.dataset.mapCluster !== '0' && typeof L.markerClusterGroup === 'function';
     var initialBounds = safeBounds(el.dataset.mapBounds);
 
+    // Per-instance fit_padding override (data-map-fit-padding from macro param).
+    // Shallow-merge onto cfg so downstream fitOpts() sees the effective value.
+    var padOverride = safeJson(el.dataset.mapFitPadding);
+    if (padOverride && padOverride.length === 4) {
+      cfg = Object.assign({}, cfg, { fit_padding: padOverride });
+    }
+
     var map = L.map(el);
     if (initialBounds) map.fitBounds(initialBounds, fitOpts(cfg, 12));
     else map.setView(cfg.default_center || [49.4, 17.95], cfg.default_zoom || 9);
