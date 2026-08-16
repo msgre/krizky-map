@@ -72,6 +72,11 @@ site:
     default_center: [49.4, 17.95]
     default_zoom: 9
 
+    # Volitelné: po každém `krizky-filters:update` (i initial URL filter)
+    # mapa se přizoomuje na box viditelných markerů. Bez filter změn
+    # zůstává view stabilní. 0 viditelných markerů = view se nemění.
+    fit_on_filter: false
+
     # Cesty k lokálním asstům (uživatel stáhne Leaflet do svého assets/)
     leaflet:
       js: /assets/leaflet/leaflet.js

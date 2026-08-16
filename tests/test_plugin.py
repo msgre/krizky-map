@@ -201,6 +201,29 @@ def test_runtime_map_config_exposes_label_field(tmp_path):
     assert cfg["markers"]["category_label_field"] == "kategorie"
 
 
+# ---------------------------------------------------------------------------
+# fit_on_filter
+# ---------------------------------------------------------------------------
+
+def test_fit_on_filter_default_false():
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({})
+    assert cfg["fit_on_filter"] is False
+
+
+def test_fit_on_filter_true_when_enabled():
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({"fit_on_filter": True})
+    assert cfg["fit_on_filter"] is True
+
+
+def test_fit_on_filter_coerces_truthy_to_bool():
+    """User can accidentally write `fit_on_filter: yes` (YAML) — coerce to bool."""
+    plugin = MapPlugin()
+    assert plugin._runtime_map_config({"fit_on_filter": 1})["fit_on_filter"] is True
+    assert plugin._runtime_map_config({"fit_on_filter": ""})["fit_on_filter"] is False
+
+
 def test_after_page_written_skips_detail_pages(tmp_path):
     """Detail pages get data inlined into data-* attrs, no geojson needed."""
     plugin = MapPlugin()

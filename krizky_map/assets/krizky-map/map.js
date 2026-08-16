@@ -102,6 +102,8 @@
       recs.forEach(function (r) { if (r && r.slug) visible[r.slug] = 1; });
       applyFilter(layerGroup, slugToMarker, allSlugs, visible);
       if (panelHooks && panelHooks.count) panelHooks.count.textContent = String(recs.length);
+      // Optional: re-fit the map on filter update (skip when 0 visible markers).
+      if (cfg.fit_on_filter) fitVisible(map, slugToMarker, visible);
     }
 
     document.addEventListener('krizky-filters:update', function (e) {
@@ -271,6 +273,16 @@
       if (shouldShow && !has) layer.addLayer(m);
       else if (!shouldShow && has) layer.removeLayer(m);
     });
+  }
+
+  function fitVisible(map, slugToMarker, visible) {
+    var latlngs = [];
+    Object.keys(visible).forEach(function (s) {
+      var m = slugToMarker[s];
+      if (m && m.getLatLng) latlngs.push(m.getLatLng());
+    });
+    if (!latlngs.length) return;   // (a) — 0 markers = leave view alone.
+    map.fitBounds(L.latLngBounds(latlngs), { padding: [30, 30], maxZoom: 15 });
   }
 
   // ------------------------------------------------------------------

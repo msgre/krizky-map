@@ -185,6 +185,10 @@ class MapPlugin:
             ],
             "default_center": map_cfg.get("default_center", [49.4, 17.95]),
             "default_zoom": map_cfg.get("default_zoom", 9),
+            # When true, re-fit the map to the visible markers after each
+            # `krizky-filters:update` (including the initial URL-driven filter).
+            # Default false = view stays put on filter changes.
+            "fit_on_filter": bool(map_cfg.get("fit_on_filter", False)),
         }
 
     # ------------------------------------------------------------------
