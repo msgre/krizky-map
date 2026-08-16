@@ -100,10 +100,15 @@
           var lat = coords[1], lng = coords[0];
           var slug = props.slug;
           var m = L.marker([lat, lng], { icon: buildIcon(cfg.markers, props[cfg.markers.category_field]) });
-          m.on('click', function () {
-            if (panelHooks) fillPanel(panelHooks, props, cfg);
-            else m.bindPopup(popupHtml(props, cfg, { link: true })).openPopup();
-          });
+          if (panelHooks) {
+            // Full mode: side panel replaces popup.
+            m.on('click', function () { fillPanel(panelHooks, props, cfg); });
+          } else {
+            // List mode: bind popup once at construction time so Leaflet handles
+            // toggle (open/close on click) itself — binding inside a click handler
+            // would fight the built-in toggle and only work on first click.
+            m.bindPopup(popupHtml(props, cfg, { link: true }));
+          }
           layerGroup.addLayer(m);
           if (slug) { slugToMarker[slug] = m; allSlugs.push(slug); }
         });
@@ -172,7 +177,9 @@
   function popupHtml(props, cfg, opts) {
     var link = opts && opts.link;
     var name = escHtml(props.name || props.nazev || '');
-    var cat = props.category || props[cfg.markers.category_field];
+    // category_label_field = display name; category_field = slug (fallback).
+    var labelField = cfg.markers.category_label_field || cfg.markers.category_field;
+    var cat = props.category || (labelField ? props[labelField] : null);
     var out = '<div class="k-popup">';
     out += '<div class="k-popup-name">' + name + '</div>';
     if (cat) out += '<div class="k-popup-cat">' + escHtml(cat) + '</div>';
@@ -202,7 +209,8 @@
     if (!hooks.detail) return;
     var name = escHtml(props.name || props.nazev || '');
     var loc = escHtml(props.location || props.umisteni || '');
-    var cat = props.category || props[cfg.markers.category_field];
+    var labelField = cfg.markers.category_label_field || cfg.markers.category_field;
+    var cat = props.category || (labelField ? props[labelField] : null);
     var thumb = props.thumbnail || props.thumbnail_url;
     var focal = props.focal_point ? ';object-position:' + escAttr(props.focal_point) : '';
     var html = '';

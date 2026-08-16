@@ -71,6 +71,21 @@ def _page_map_cfg(page_cfg: dict) -> dict | None:
     return {} if m is True else dict(m)
 
 
+def _label_field(markers_cfg: dict) -> str | None:
+    """Resolve the display label field for a category.
+
+    Priority: explicit ``category_label_field`` → auto-derived from
+    ``category_field`` by trimming a trailing ``_slug`` (common convention:
+    ``kategorie_slug`` → ``kategorie``). Returns None when neither is set.
+    """
+    if markers_cfg.get("category_label_field") is not None:
+        return markers_cfg["category_label_field"]
+    cf = markers_cfg.get("category_field")
+    if cf and cf.endswith("_slug"):
+        return cf[:-5]
+    return cf
+
+
 def _stem_from_html_path(html_path: str) -> str:
     return PurePosixPath(html_path.lstrip("/")).stem
 
@@ -145,6 +160,7 @@ class MapPlugin:
                 "color": markers.get("color", "#850000"),
                 "size": markers.get("size", 32),
                 "category_field": markers.get("category_field"),
+                "category_label_field": _label_field(markers),
                 "icon_prefix": markers.get("icon_prefix", ""),
                 "fallback_icon": markers.get("fallback_icon", ""),
             },
@@ -233,13 +249,17 @@ class MapPlugin:
 
         site_map = config.get("site", {}).get("map", {}) or {}
         markers_cfg = site_map.get("markers", {}) or {}
-        fields = page_map.get("fields")
         lat_field = page_map.get("lat_field") or markers_cfg.get("lat_field") or DEFAULT_LAT_FIELD
         lng_field = page_map.get("lng_field") or markers_cfg.get("lng_field") or DEFAULT_LNG_FIELD
-        # Ensure category_field ends up in properties when configured.
+        # Ensure category_field (slug, for icon lookup) and label_field (display
+        # name, for popup) end up in properties even when the user forgot them.
         cat_field = markers_cfg.get("category_field")
-        if cat_field and fields and cat_field not in fields:
-            fields = list(fields) + [cat_field]
+        label_field = _label_field(markers_cfg)
+        fields = list(page_map.get("fields") or ())
+        for extra in (cat_field, label_field):
+            if extra and extra not in fields:
+                fields.append(extra)
+        fields = fields or None    # None = fall back to DEFAULT_FIELDS in geojson.py
 
         fc = build_feature_collection(records, fields, lat_field, lng_field)
         stem = _stem_from_html_path(html_path)

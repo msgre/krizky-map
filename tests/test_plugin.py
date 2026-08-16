@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from krizky_map.plugin import MapPlugin, _resolve_tile
+from krizky_map.plugin import MapPlugin, _label_field, _resolve_tile
 
 
 # ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ def test_after_page_written_respects_page_fields(tmp_path):
 def test_after_page_written_adds_category_field_to_properties(tmp_path):
     """When markers.category_field is set, it's implicitly added to props."""
     plugin = MapPlugin()
-    records = [{"slug": "a", "nazev": "A", "kategorie_slug": "kriz",
+    records = [{"slug": "a", "nazev": "A", "kategorie_slug": "kriz", "kategorie": "Kříž",
                 "latitude": 49.5, "longitude": 17.9}]
     plugin.after_page_written(
         page_cfg={"map": {"fields": ["nazev"]}},
@@ -147,6 +147,58 @@ def test_after_page_written_adds_category_field_to_properties(tmp_path):
     )
     props = json.loads((tmp_path / "maps" / "x.geojson").read_text())["features"][0]["properties"]
     assert props["kategorie_slug"] == "kriz"
+    # Label field ("kategorie") is auto-derived from "kategorie_slug" and added too.
+    assert props["kategorie"] == "Kříž"
+
+
+def test_after_page_written_respects_explicit_label_field(tmp_path):
+    """User can override auto-derive with markers.category_label_field."""
+    plugin = MapPlugin()
+    records = [{"slug": "a", "nazev": "A", "typ_slug": "kriz", "typ_display": "Křížek",
+                "latitude": 49.5, "longitude": 17.9}]
+    plugin.after_page_written(
+        page_cfg={"map": True},
+        html_path="/x.html",
+        output_dir=tmp_path,
+        records=records,
+        config=_config({"markers": {
+            "category_field": "typ_slug",
+            "category_label_field": "typ_display",
+        }}),
+    )
+    props = json.loads((tmp_path / "maps" / "x.geojson").read_text())["features"][0]["properties"]
+    assert props["typ_slug"] == "kriz"
+    assert props["typ_display"] == "Křížek"
+
+
+# ---------------------------------------------------------------------------
+# _label_field auto-derive
+# ---------------------------------------------------------------------------
+
+def test_label_field_trims_slug_suffix():
+    assert _label_field({"category_field": "kategorie_slug"}) == "kategorie"
+    assert _label_field({"category_field": "typ_slug"}) == "typ"
+
+
+def test_label_field_explicit_wins():
+    assert _label_field({
+        "category_field": "kategorie_slug",
+        "category_label_field": "kategorie_nazev",
+    }) == "kategorie_nazev"
+
+
+def test_label_field_without_suffix_returns_same():
+    assert _label_field({"category_field": "kategorie"}) == "kategorie"
+
+
+def test_label_field_none_when_nothing_configured():
+    assert _label_field({}) is None
+
+
+def test_runtime_map_config_exposes_label_field(tmp_path):
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({"markers": {"category_field": "kategorie_slug"}})
+    assert cfg["markers"]["category_label_field"] == "kategorie"
 
 
 def test_after_page_written_skips_detail_pages(tmp_path):
