@@ -187,9 +187,11 @@
       : '';
     var html = '<span class="k-marker-body"></span>' + inner;
     var anchor = shape === 'drop' ? [size / 2, size] : [size / 2, size / 2];
+    var style = '--marker-color:' + escAttr(color) + ';width:' + size + 'px;height:' + size + 'px';
+    if (markers.active_color) style += ';--marker-active-color:' + escAttr(markers.active_color);
     return L.divIcon({
       className: 'k-marker k-marker-' + shape,
-      html: '<div class="k-marker-wrap" style="--marker-color:' + escAttr(color) + ';width:' + size + 'px;height:' + size + 'px">' + html + '</div>',
+      html: '<div class="k-marker-wrap" style="' + style + '">' + html + '</div>',
       iconSize: [size, size],
       iconAnchor: anchor,
       popupAnchor: [0, -size],

@@ -177,6 +177,9 @@ class MapPlugin:
             "markers": {
                 "shape": markers.get("shape", "drop"),
                 "color": markers.get("color", "#850000"),
+                # Highlight color for the active marker (popup open / clicked in panel).
+                # None = active marker keeps `color` (only scaled up).
+                "active_color": markers.get("active_color"),
                 "size": markers.get("size", 32),
                 "category_field": markers.get("category_field"),
                 "category_label_field": _label_field(markers),

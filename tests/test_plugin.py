@@ -277,6 +277,18 @@ def test_runtime_map_config_exposes_label_field(tmp_path):
     assert cfg["markers"]["category_label_field"] == "kategorie"
 
 
+def test_runtime_map_config_active_color_default_none():
+    plugin = MapPlugin()
+    assert plugin._runtime_map_config({})["markers"]["active_color"] is None
+
+
+def test_runtime_map_config_exposes_active_color():
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({"markers": {"color": "#5E0000", "active_color": "#850000"}})
+    assert cfg["markers"]["color"] == "#5E0000"
+    assert cfg["markers"]["active_color"] == "#850000"
+
+
 # ---------------------------------------------------------------------------
 # fit_on_filter
 # ---------------------------------------------------------------------------

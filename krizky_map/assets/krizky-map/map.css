@@ -64,12 +64,16 @@
 }
 
 /* Active marker (popup open in list mode / clicked in full mode).
-   Default = scale + higher z-index. Barvu si projekt přebije v svém stylopisu
-   (typicky `.k-marker-active .k-marker-body { background: … }`). */
+   Barva se řídí konfigurací `markers.active_color` — když je nastavena,
+   plugin ji vloží jako inline CSS var `--marker-active-color`. Bez configu
+   aktivní marker zachová barvu default markeru, jen se zvětší. */
 .k-marker-active { z-index: 1000 !important; }
 .k-marker-active .k-marker-wrap {
   transform: scale(1.25);
   transform-origin: center bottom;
+}
+.k-marker-active .k-marker-body {
+  background: var(--marker-active-color, var(--marker-color, #850000));
 }
 .k-marker .k-marker-body {
   position: absolute;
