@@ -135,6 +135,12 @@
           layerGroup.addLayer(m);
           if (slug) { slugToMarker[slug] = m; allSlugs.push(slug); }
         });
+        // SSR count in the template uses `records|length`, which is the
+        // paginated subset. Geojson always holds every record for the page,
+        // so it's the authoritative count. Filter events overwrite this later.
+        if (panelHooks && panelHooks.count) {
+          panelHooks.count.textContent = String((fc.features || []).length);
+        }
         markersReady = true;
         if (pendingEvent) { applyEvent(pendingEvent); pendingEvent = null; }
       })
