@@ -171,6 +171,13 @@
         if (panelHooks && panelHooks.count) {
           panelHooks.count.textContent = String((fc.features || []).length);
         }
+        // Re-fit the view to the geojson's bbox. SSR bounds (data-map-bounds)
+        // reflect only `filtered` in the template, which may be paginated;
+        // geojson always contains every record for the page.
+        if (fc.bbox && fc.bbox.length === 4) {
+          var b = fc.bbox;
+          map.fitBounds([[b[1], b[0]], [b[3], b[2]]], fitOpts(cfg, 12));
+        }
         markersReady = true;
         if (pendingEvent) { applyEvent(pendingEvent); pendingEvent = null; }
       })
