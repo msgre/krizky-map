@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from krizky_map.geojson import (
     DEFAULT_FIELDS,
     bounds_from_feature_collection,
@@ -13,10 +11,10 @@ from krizky_map.geojson import (
     write_geojson,
 )
 
-
 # ---------------------------------------------------------------------------
 # build_feature_collection
 # ---------------------------------------------------------------------------
+
 
 def test_build_feature_collection_basic():
     records = [{"slug": "a", "nazev": "A", "latitude": 49.5, "longitude": 17.9}]
@@ -56,8 +54,16 @@ def test_build_feature_collection_string_coords_parsed():
 
 
 def test_build_feature_collection_fields_control_properties():
-    records = [{"slug": "a", "nazev": "X", "umisteni": "Y", "hidden": "Z",
-                "latitude": 49.5, "longitude": 17.9}]
+    records = [
+        {
+            "slug": "a",
+            "nazev": "X",
+            "umisteni": "Y",
+            "hidden": "Z",
+            "latitude": 49.5,
+            "longitude": 17.9,
+        }
+    ]
     fc = build_feature_collection(records, ["nazev"])
     assert fc["features"][0]["properties"] == {"nazev": "X", "slug": "a"}
 
@@ -70,8 +76,7 @@ def test_build_feature_collection_always_includes_slug():
 
 
 def test_build_feature_collection_default_fields_when_none():
-    records = [{"slug": "a", "nazev": "X", "umisteni": "Y",
-                "latitude": 49.5, "longitude": 17.9}]
+    records = [{"slug": "a", "nazev": "X", "umisteni": "Y", "latitude": 49.5, "longitude": 17.9}]
     fc = build_feature_collection(records, None)
     props = fc["features"][0]["properties"]
     for k in DEFAULT_FIELDS:
@@ -104,16 +109,28 @@ def test_build_feature_collection_empty_records_no_bbox():
 # bounds_from_feature_collection
 # ---------------------------------------------------------------------------
 
+
 def test_bounds_from_bbox():
     fc = {"type": "FeatureCollection", "features": [], "bbox": [17.5, 49.2, 18.2, 50.1]}
     assert bounds_from_feature_collection(fc) == [[49.2, 17.5], [50.1, 18.2]]
 
 
 def test_bounds_computed_when_no_bbox():
-    fc = {"type": "FeatureCollection", "features": [
-        {"type": "Feature", "geometry": {"type": "Point", "coordinates": [17.5, 49.2]}, "properties": {}},
-        {"type": "Feature", "geometry": {"type": "Point", "coordinates": [18.2, 50.1]}, "properties": {}},
-    ]}
+    fc = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [17.5, 49.2]},
+                "properties": {},
+            },
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [18.2, 50.1]},
+                "properties": {},
+            },
+        ],
+    }
     assert bounds_from_feature_collection(fc) == [[49.2, 17.5], [50.1, 18.2]]
 
 
@@ -125,6 +142,7 @@ def test_bounds_none_for_empty():
 # write_geojson
 # ---------------------------------------------------------------------------
 
+
 def test_write_geojson_creates_maps_dir(tmp_path):
     fc = {"type": "FeatureCollection", "features": []}
     dst = write_geojson(fc, tmp_path, "vsechna-mista")
@@ -134,9 +152,16 @@ def test_write_geojson_creates_maps_dir(tmp_path):
 
 def test_write_geojson_compact_output(tmp_path):
     """Bez zbytečných mezer a newlines — menší output."""
-    fc = {"type": "FeatureCollection", "features": [
-        {"type": "Feature", "geometry": {"type": "Point", "coordinates": [17.9, 49.5]}, "properties": {"slug": "a"}},
-    ]}
+    fc = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [17.9, 49.5]},
+                "properties": {"slug": "a"},
+            },
+        ],
+    }
     dst = write_geojson(fc, tmp_path, "x")
     raw = dst.read_text(encoding="utf-8")
     assert "\n" not in raw

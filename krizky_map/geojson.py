@@ -59,11 +59,13 @@ def build_feature_collection(
             continue
 
         props = {k: record.get(k) for k in prop_fields if k in record}
-        features.append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng_f, lat_f]},
-            "properties": props,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lng_f, lat_f]},
+                "properties": props,
+            }
+        )
         lats.append(lat_f)
         lngs.append(lng_f)
 
