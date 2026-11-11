@@ -4,8 +4,6 @@ Reads records with coordinate columns and produces a compact GeoJSON
 ``FeatureCollection`` with an optional ``bbox`` for fast initial fitBounds.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -59,11 +57,13 @@ def build_feature_collection(
             continue
 
         props = {k: record.get(k) for k in prop_fields if k in record}
-        features.append({
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lng_f, lat_f]},
-            "properties": props,
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lng_f, lat_f]},
+                "properties": props,
+            }
+        )
         lats.append(lat_f)
         lngs.append(lng_f)
 

@@ -1,0 +1,59 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "/Users/msgre/projects/muzeum/krizky/docs/guidelines",
+      "/Users/msgre/projects/muzeum/krizky/work"
+    ],
+    "allow": [
+      "Bash(scripts/verify)",
+      "Bash(./scripts/verify)",
+      "Bash(swarm-merge *)",
+      "Bash(uv sync *)",
+      "Bash(uv run *)",
+      "Bash(npm ci *)",
+      "Bash(npx --no-install eslint *)",
+      "Bash(npx --no-install prettier *)",
+      "Bash(node --test *)",
+      "Bash(node --check *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git switch *)",
+      "Bash(git checkout -b *)",
+      "Bash(git branch *)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(git rebase *)",
+      "Bash(git merge *)",
+      "Bash(git worktree *)",
+      "Bash(git push -u origin *)",
+      "Bash(git push origin *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr comment *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr checks *)",
+      "Bash(swarm-notify *)",
+      "Bash(swarm-metrics *)",
+      "Bash(gh auth status*)",
+      "Bash(date *)",
+      "Bash(gh pr edit *)"
+    ],
+    "deny": [
+      "Bash(git push * main)",
+      "Bash(git push * main *)",
+      "Bash(git push *:main)",
+      "Bash(git push *:main *)",
+      "Bash(git push *refs/heads/main*)",
+      "Bash(git push *--force*)",
+      "Bash(git push * -f*)",
+      "Bash(gh pr merge *)",
+      "Bash(git reset --hard *)",
+      "Bash(rm -rf *)"
+    ]
+  }
+}

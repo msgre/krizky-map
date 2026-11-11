@@ -1,0 +1,15 @@
+{
+  "name": "krizky-map-dev",
+  "private": true,
+  "description": "Jen vývojové nástroje (lint, formát, testy JS). Plugin sám se distribuuje jako Python balíček.",
+  "scripts": {
+    "lint": "eslint .",
+    "format:check": "prettier --check \"krizky_map/assets/**/*.{js,css}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10"
+  }
+}

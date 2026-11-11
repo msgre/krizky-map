@@ -1,20 +1,17 @@
 """krizky-map plugin — hook implementations."""
 
-from __future__ import annotations
-
-import json
 import logging
 import shutil
 from pathlib import Path, PurePosixPath
 
 from jinja2 import ChoiceLoader, FileSystemLoader
-
 from krizky.hooks import hookimpl
+
 from krizky_map.geojson import (
     DEFAULT_LAT_FIELD,
     DEFAULT_LNG_FIELD,
-    build_feature_collection,
     bounds_from_feature_collection,
+    build_feature_collection,
     write_geojson,
 )
 
@@ -30,7 +27,11 @@ _TILE_PRESETS: dict[str, dict] = {
         "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         "attribution": "&copy; OpenStreetMap contributors",
         "subdomains": ["a", "b", "c"],
-        "preconnect": ["https://a.tile.openstreetmap.org", "https://b.tile.openstreetmap.org", "https://c.tile.openstreetmap.org"],
+        "preconnect": [
+            "https://a.tile.openstreetmap.org",
+            "https://b.tile.openstreetmap.org",
+            "https://c.tile.openstreetmap.org",
+        ],
     },
     "osm-hot": {
         "url": "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
@@ -135,9 +136,11 @@ class MapPlugin:
                 for ldr in loaders
             )
             if not already:
-                env.loader.loaders = (
-                    [loaders[0], FileSystemLoader(str(_PLUGIN_TEMPLATES))] + loaders[1:]
-                )
+                env.loader.loaders = [
+                    loaders[0],
+                    FileSystemLoader(str(_PLUGIN_TEMPLATES)),
+                    *loaders[1:],
+                ]
         map_cfg = config.get("site", {}).get("map", {}) or {}
         # krizky-photos base URL — needed for panel thumbnail composition.
         photos_cfg = config.get("sources", {}).get("photos", {}) or {}
@@ -196,7 +199,9 @@ class MapPlugin:
                 "fill_color": mask.get("fill_color", "#000000"),
                 "fill_opacity": mask.get("fill_opacity", 0.3),
                 "blur": mask.get("blur", 0),
-            } if mask else None,
+            }
+            if mask
+            else None,
             "overlays": [
                 {
                     "url": ov.get("_public_url"),
@@ -306,7 +311,7 @@ class MapPlugin:
         for extra in (cat_field, label_field, subtitle_field, thumb_field):
             if extra and extra not in fields:
                 fields.append(extra)
-        fields = fields or None    # None = fall back to DEFAULT_FIELDS in geojson.py
+        fields = fields or None  # None = fall back to DEFAULT_FIELDS in geojson.py
 
         fc = build_feature_collection(records, fields, lat_field, lng_field)
         stem = _stem_from_html_path(html_path)
