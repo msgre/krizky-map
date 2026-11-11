@@ -22,5 +22,41 @@ krizky = { git = "https://github.com/msgre/krizky.git" }
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0",
+    "pytest>=9.1",
+    "ruff>=0.16",
 ]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [".venv", "__pycache__", ".pytest_cache", "tests/fixtures", ".claude"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "A",    # builtins
+    "C4",   # comprehensions
+    "SIM",  # simplify
+    "PT",   # pytest style
+    "RUF",  # ruff-specific
+    "FA",   # future-annotations
+    "TID",  # tidy-imports (banned-api níže)
+]
+ignore = [
+    "E501",  # line-too-long — řídí line-length
+]
+allowed-confusables = ["×"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"__future__.annotations".msg = "Python 3.12+ ho nepotřebuje; viz docs/guidelines/python.md"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
