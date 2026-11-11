@@ -1,7 +1,5 @@
 """Tests for krizky_map.plugin — hook wiring, config resolution, asset copy."""
 
-from __future__ import annotations
-
 import json
 
 from krizky_map.plugin import MapPlugin, _label_field, _panel_config, _resolve_tile

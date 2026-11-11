@@ -8,6 +8,7 @@
  * Bez cross-plugin závislosti — filter integration je opt-in (listen na
  * `krizky-filters:update`); pokud filter není přítomen, mapa zobrazí vše.
  */
+/* global L */
 (function () {
   'use strict';
 
@@ -37,7 +38,7 @@
   function safeJson(s) {
     try {
       return s ? JSON.parse(s) : null;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -392,7 +393,7 @@
       return null;
     }
     const rowId = props[field];
-    if (rowId == null || rowId === '') {
+    if (rowId === null || rowId === undefined || rowId === '') {
       return null;
     }
     const pad = panel.thumbnail_pad || 3;
@@ -582,13 +583,13 @@
   // Utils
   // ------------------------------------------------------------------
   function escHtml(s) {
-    return String(s == null ? '' : s)
+    return String(s ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
   function escAttr(s) {
-    return String(s == null ? '' : s)
+    return String(s ?? '')
       .replace(/&/g, '&amp;')
       .replace(/"/g, '&quot;')
       .replace(/</g, '&lt;')

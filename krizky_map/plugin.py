@@ -1,7 +1,5 @@
 """krizky-map plugin — hook implementations."""
 
-from __future__ import annotations
-
 import logging
 import shutil
 from pathlib import Path, PurePosixPath
@@ -141,7 +139,8 @@ class MapPlugin:
                 env.loader.loaders = [
                     loaders[0],
                     FileSystemLoader(str(_PLUGIN_TEMPLATES)),
-                ] + loaders[1:]
+                    *loaders[1:],
+                ]
         map_cfg = config.get("site", {}).get("map", {}) or {}
         # krizky-photos base URL — needed for panel thumbnail composition.
         photos_cfg = config.get("sources", {}).get("photos", {}) or {}

@@ -4,8 +4,6 @@ Reads records with coordinate columns and produces a compact GeoJSON
 ``FeatureCollection`` with an optional ``bbox`` for fast initial fitBounds.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

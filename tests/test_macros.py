@@ -1,7 +1,5 @@
 """Sanity render of _map.html macros."""
 
-from __future__ import annotations
-
 import pytest
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader
 

@@ -1,7 +1,5 @@
 """Tests for krizky_map.geojson — build_feature_collection + bounds + write."""
 
-from __future__ import annotations
-
 import json
 
 from krizky_map.geojson import (
@@ -165,4 +163,5 @@ def test_write_geojson_compact_output(tmp_path):
     dst = write_geojson(fc, tmp_path, "x")
     raw = dst.read_text(encoding="utf-8")
     assert "\n" not in raw
-    assert ", " not in raw and ": " not in raw
+    assert ", " not in raw
+    assert ": " not in raw
