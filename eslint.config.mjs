@@ -1,4 +1,4 @@
-// Překlad kanonické konfigurace z docs/guidelines/javascript.md (.eslintrc.json) do flat configu ESLint 9+.
+// Konfigurace ESLint společná pro všechny pluginy krizky s JS, viz docs/guidelines/javascript.md › ESLint a Prettier v core.
 import js from '@eslint/js';
 import globals from 'globals';
 
