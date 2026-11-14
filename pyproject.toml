@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Leaflet-based map plugin for krizky static site generator"
 requires-python = ">=3.12"
 dependencies = [
-    "krizky>=0.1",
+    "krizky>=0.2",
 ]
 
 [project.entry-points."krizky"]
