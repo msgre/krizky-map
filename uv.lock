@@ -55,8 +55,8 @@ wheels = [
 
 [[package]]
 name = "krizky"
-version = "0.1.0"
-source = { git = "https://github.com/msgre/krizky.git#09af781bc94631040d5bb60b1056941d82e51378" }
+version = "0.2.0"
+source = { git = "https://github.com/msgre/krizky.git#e32694e3fcb393f21ed47c89752f8073de91badb" }
 dependencies = [
     { name = "click" },
     { name = "jinja2" },
