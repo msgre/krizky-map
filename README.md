@@ -117,7 +117,7 @@ pages:
   detail:
     detail: true
     template: detail.html
-    map: true                            # opt-in — enable map assets for this page
+    map: true                            # opt-in — vloží CSS/JS mapy do stránky a vygeneruje GeoJSON
 
   vsechna_mista:
     template: vsechna_mista.html
@@ -184,6 +184,10 @@ Když je stránka pod plugin `krizky-filters`, mapa se automaticky napojí na je
 - **Side panel** v `map_full` = thumbnail + název + kategorie + odkaz. Na mobilu se panel scrolluje do view.
 - **Locate button** (jen `map_full`) = `navigator.geolocation` s markerem přesnosti.
 - **Filter integration**: mapa poslouchá `krizky-filters:update`, filtruje své features podle `slug`. Nezávislé — funguje i bez filter pluginu.
+
+## Výstupní assety
+
+Adresář `output/krizky-map/` (`map.js`, `map.css`, maska a overlaye) je ve výstupu vždy, i když žádná stránka mapu nepoužívá. Při každém buildu se vytvoří znovu (hook `copy_plugin_assets` z core 0.2), takže v něm nezůstanou staré soubory, například overlay odebraný z configu. CSS a JS se do HTML vkládají jen na stránkách s `map:`.
 
 ## Bez JavaScriptu
 

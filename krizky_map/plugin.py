@@ -4,8 +4,12 @@ import logging
 import shutil
 from pathlib import Path, PurePosixPath
 
-from jinja2 import ChoiceLoader, FileSystemLoader
 from krizky.hooks import hookimpl
+from krizky.plugin_helpers import (
+    register_plugin_templates,
+    replace_tree,
+    resolve_path,
+)
 
 from krizky_map.geojson import (
     DEFAULT_LAT_FIELD,
@@ -113,11 +117,11 @@ class MapPlugin:
     - prepare_jinja2_environment: adds plugin templates + `map_config` global
     - inject_head: preconnect + Leaflet CSS + map.css for pages with `map:` cfg
     - inject_body_end: Leaflet JS + markercluster JS + map.js for pages with `map:` cfg
+    - copy_plugin_assets: recreates <output>/krizky-map/ (map.js, map.css, mask, overlays)
     - after_page_written: generates <output>/maps/<stem>.geojson for non-detail pages
     """
 
     def __init__(self) -> None:
-        self._assets_copied: set[str] = set()
         self._config_dir: Path | None = None
         self._photos_base_url: str = ""
 
@@ -129,24 +133,13 @@ class MapPlugin:
     def prepare_jinja2_environment(self, env, config, config_dir):
         """Insert plugin templates and expose map_config to templates."""
         self._config_dir = Path(config_dir) if config_dir else None
-        if isinstance(env.loader, ChoiceLoader):
-            loaders = env.loader.loaders
-            already = any(
-                isinstance(ldr, FileSystemLoader) and str(_PLUGIN_TEMPLATES) in ldr.searchpath
-                for ldr in loaders
-            )
-            if not already:
-                env.loader.loaders = [
-                    loaders[0],
-                    FileSystemLoader(str(_PLUGIN_TEMPLATES)),
-                    *loaders[1:],
-                ]
+        register_plugin_templates(env, _PLUGIN_TEMPLATES)
         map_cfg = config.get("site", {}).get("map", {}) or {}
         # krizky-photos base URL — needed for panel thumbnail composition.
         photos_cfg = config.get("sources", {}).get("photos", {}) or {}
         self._photos_base_url = (photos_cfg.get("base_url") or "").rstrip("/")
         # Register public URLs for mask + overlays now (before render). The actual
-        # file copy happens in after_page_written when output_dir is known.
+        # file copy happens in copy_plugin_assets when output_dir is known.
         self._register_data_urls(map_cfg)
         env.globals["map_config"] = self._runtime_map_config(map_cfg)
         markers_cfg = map_cfg.get("markers", {}) or {}
@@ -279,7 +272,7 @@ class MapPlugin:
         return "\n".join(parts) + "\n"
 
     # ------------------------------------------------------------------
-    # after_page_written — build geojson + copy assets + copy mask/overlays
+    # after_page_written — build geojson
     # ------------------------------------------------------------------
 
     @hookimpl
@@ -287,7 +280,6 @@ class MapPlugin:
         page_map = _page_map_cfg(page_cfg)
         if page_map is None:
             return
-        self._copy_assets(output_dir, config)
 
         # Detail pages don't need a geojson — data are inlined in data-* attrs.
         if page_cfg.get("detail"):
@@ -318,59 +310,42 @@ class MapPlugin:
         write_geojson(fc, output_dir, stem)
 
     # ------------------------------------------------------------------
-    # Assets: map.js/css + mask + overlays copied once per output dir.
+    # copy_plugin_assets — map.js/css + mask + overlays, recreated every build.
     # ------------------------------------------------------------------
+
+    @hookimpl
+    def copy_plugin_assets(self, output_dir, config, config_dir):
+        """Recreate <output>/krizky-map/ with plugin assets, mask and overlays."""
+        dst = Path(output_dir) / "krizky-map"
+        replace_tree(_PLUGIN_ASSETS / "krizky-map", dst)
+
+        base = Path(config_dir) if config_dir else Path.cwd()
+        site_map = config.get("site", {}).get("map", {}) or {}
+
+        mask = site_map.get("mask") or {}
+        src_path = resolve_path(mask.get("polygon"), base)
+        if src_path and src_path.exists():
+            shutil.copy2(src_path, dst / "mask.geojson")
+
+        for i, ov in enumerate(site_map.get("overlays") or []):
+            src_path = resolve_path(ov.get("source"), base)
+            if src_path and src_path.exists():
+                shutil.copy2(src_path, dst / f"overlay-{i}.geojson")
 
     def _register_data_urls(self, map_cfg: dict) -> None:
         """Populate ``_public_url`` on mask + overlays so map_config exposes them.
 
         Runs during prepare_jinja2_environment so map_config global has the
         URLs before any template is rendered. Actual file copy is deferred to
-        after_page_written (needs output_dir).
+        copy_plugin_assets (needs output_dir).
         """
+        base = self._config_dir or Path.cwd()
         mask = map_cfg.get("mask") or {}
-        if mask.get("polygon") and self._resolve_source_path(mask["polygon"]):
+        if mask.get("polygon") and resolve_path(mask["polygon"], base):
             mask["_public_url"] = "/krizky-map/mask.geojson"
         for i, ov in enumerate(map_cfg.get("overlays") or []):
-            if ov.get("source") and self._resolve_source_path(ov["source"]):
+            if ov.get("source") and resolve_path(ov["source"], base):
                 ov["_public_url"] = f"/krizky-map/overlay-{i}.geojson"
-
-    def _copy_assets(self, output_dir: Path, config: dict) -> None:
-        key = str(output_dir)
-        if key in self._assets_copied:
-            return
-        dst = output_dir / "krizky-map"
-        dst.mkdir(parents=True, exist_ok=True)
-        for name in ("map.js", "map.css"):
-            src = _PLUGIN_ASSETS / "krizky-map" / name
-            if src.exists():
-                shutil.copy2(src, dst / name)
-
-        # Copy mask polygon and overlay geojsons (URLs already registered in
-        # prepare_jinja2_environment via _register_data_urls).
-        site_map = config.get("site", {}).get("map", {}) or {}
-
-        mask = site_map.get("mask") or {}
-        if mask.get("polygon"):
-            src_path = self._resolve_source_path(mask["polygon"])
-            if src_path and src_path.exists():
-                shutil.copy2(src_path, dst / "mask.geojson")
-
-        for i, ov in enumerate(site_map.get("overlays") or []):
-            src_path = self._resolve_source_path(ov.get("source"))
-            if src_path and src_path.exists():
-                shutil.copy2(src_path, dst / f"overlay-{i}.geojson")
-
-        self._assets_copied.add(key)
-
-    def _resolve_source_path(self, source: str | None) -> Path | None:
-        """Resolve a config-relative path using config_dir stored from prepare_jinja2."""
-        if not source:
-            return None
-        p = Path(source)
-        if p.is_absolute() or self._config_dir is None:
-            return p
-        return (self._config_dir / p).resolve()
 
 
 plugin = MapPlugin()

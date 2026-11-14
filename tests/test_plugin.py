@@ -375,62 +375,106 @@ def test_after_page_written_skips_detail_pages(tmp_path):
     assert not (tmp_path / "maps").exists()
 
 
-def test_after_page_written_copies_assets(tmp_path):
+def test_core_plugin_helpers_importable():
+    from krizky.plugin_helpers import register_plugin_templates, replace_tree, resolve_path
+
+    assert callable(register_plugin_templates)
+    assert callable(replace_tree)
+    assert callable(resolve_path)
+
+
+def test_copy_plugin_assets_copies_js_and_css(tmp_path):
     plugin = MapPlugin()
-    plugin.after_page_written(
+    plugin.copy_plugin_assets(output_dir=tmp_path, config=_config(), config_dir=tmp_path)
+    assert (tmp_path / "krizky-map" / "map.js").exists()
+    assert (tmp_path / "krizky-map" / "map.css").exists()
+
+
+def test_copy_plugin_assets_copies_mask_and_overlays(tmp_path):
+    plugin = MapPlugin()
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "valassko.geojson").write_text('{"type":"Feature"}', encoding="utf-8")
+    (tmp_path / "data" / "kostely.geojson").write_text(
+        '{"type":"FeatureCollection","features":[]}', encoding="utf-8"
+    )
+    cfg = _config(
+        {
+            "mask": {"polygon": "data/valassko.geojson"},
+            "overlays": [{"source": "data/kostely.geojson", "style": {"type": "circle"}}],
+        }
+    )
+    plugin._config_dir = tmp_path
+    plugin._register_data_urls(cfg["site"]["map"])
+    out = tmp_path / "output"
+    plugin.copy_plugin_assets(output_dir=out, config=cfg, config_dir=tmp_path)
+    assert (out / "krizky-map" / "mask.geojson").exists()
+    assert (out / "krizky-map" / "overlay-0.geojson").exists()
+    assert cfg["site"]["map"]["mask"]["_public_url"] == "/krizky-map/mask.geojson"
+    assert cfg["site"]["map"]["overlays"][0]["_public_url"] == "/krizky-map/overlay-0.geojson"
+
+
+def test_copy_plugin_assets_skips_missing_source(tmp_path):
+    plugin = MapPlugin()
+    cfg = _config(
+        {
+            "mask": {"polygon": "data/missing.geojson"},
+            "overlays": [{"source": "data/missing-overlay.geojson"}],
+        }
+    )
+    plugin.copy_plugin_assets(output_dir=tmp_path, config=cfg, config_dir=tmp_path)
+    assert (tmp_path / "krizky-map" / "map.js").exists()
+    assert not (tmp_path / "krizky-map" / "mask.geojson").exists()
+    assert not (tmp_path / "krizky-map" / "overlay-0.geojson").exists()
+
+
+def test_copy_plugin_assets_works_without_config_dir(tmp_path):
+    plugin = MapPlugin()
+    plugin.copy_plugin_assets(output_dir=tmp_path, config=_config(), config_dir=None)
+    assert (tmp_path / "krizky-map" / "map.js").exists()
+
+
+def test_copy_plugin_assets_removes_stale_files(tmp_path):
+    stale = tmp_path / "krizky-map" / "overlay-5.geojson"
+    stale.parent.mkdir()
+    stale.write_text("{}", encoding="utf-8")
+    MapPlugin().copy_plugin_assets(output_dir=tmp_path, config=_config(), config_dir=tmp_path)
+    assert not stale.exists()
+    assert (tmp_path / "krizky-map" / "map.js").exists()
+
+
+def test_after_page_written_does_not_copy_assets(tmp_path):
+    MapPlugin().after_page_written(
         page_cfg={"map": True},
         html_path="/x.html",
         output_dir=tmp_path,
         records=[],
         config=_config(),
     )
-    assert (tmp_path / "krizky-map" / "map.css").exists()
-    assert (tmp_path / "krizky-map" / "map.js").exists()
+    assert not (tmp_path / "krizky-map").exists()
 
 
-def test_after_page_written_copies_mask_polygon(tmp_path):
+def test_prepare_jinja2_environment_registers_templates_once(tmp_path):
+    from jinja2 import ChoiceLoader, Environment, FileSystemLoader
+
+    from krizky_map.plugin import _PLUGIN_TEMPLATES
+
+    a = tmp_path / "a"
+    b = tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    env = Environment(loader=ChoiceLoader([FileSystemLoader(str(a)), FileSystemLoader(str(b))]))
     plugin = MapPlugin()
-    plugin._config_dir = tmp_path
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "valassko.geojson").write_text('{"type":"Feature"}', encoding="utf-8")
-    cfg = _config({"mask": {"polygon": "data/valassko.geojson", "fill_color": "#000"}})
-    plugin._register_data_urls(cfg["site"]["map"])
-    plugin.after_page_written(
-        page_cfg={"map": True},
-        html_path="/x.html",
-        output_dir=tmp_path / "output",
-        records=[],
-        config=cfg,
-    )
-    assert (tmp_path / "output" / "krizky-map" / "mask.geojson").exists()
-    # _public_url is set on the config for map_config exposure (registered in prepare_jinja2)
-    assert cfg["site"]["map"]["mask"]["_public_url"] == "/krizky-map/mask.geojson"
-
-
-def test_after_page_written_copies_overlays(tmp_path):
-    plugin = MapPlugin()
-    plugin._config_dir = tmp_path
-    (tmp_path / "data").mkdir()
-    (tmp_path / "data" / "kostely.geojson").write_text(
-        '{"type":"FeatureCollection","features":[]}', encoding="utf-8"
-    )
-    cfg = _config(
-        {
-            "overlays": [
-                {"source": "data/kostely.geojson", "style": {"type": "circle", "radius": 6}},
-            ]
-        }
-    )
-    plugin._register_data_urls(cfg["site"]["map"])
-    plugin.after_page_written(
-        page_cfg={"map": True},
-        html_path="/x.html",
-        output_dir=tmp_path / "output",
-        records=[],
-        config=cfg,
-    )
-    assert (tmp_path / "output" / "krizky-map" / "overlay-0.geojson").exists()
-    assert cfg["site"]["map"]["overlays"][0]["_public_url"] == "/krizky-map/overlay-0.geojson"
+    plugin.prepare_jinja2_environment(env, _config(), tmp_path)
+    plugin.prepare_jinja2_environment(env, _config(), tmp_path)
+    loaders = env.loader.loaders
+    matches = [
+        i
+        for i, ldr in enumerate(loaders)
+        if isinstance(ldr, FileSystemLoader) and str(_PLUGIN_TEMPLATES) in ldr.searchpath
+    ]
+    assert matches == [1]
+    assert len(loaders) == 3
+    assert "map_config" in env.globals
 
 
 def test_register_data_urls_before_first_render(tmp_path):
@@ -443,23 +487,3 @@ def test_register_data_urls_before_first_render(tmp_path):
     plugin._register_data_urls(map_cfg)
     exposed = plugin._runtime_map_config(map_cfg)
     assert exposed["mask"]["url"] == "/krizky-map/mask.geojson"
-
-
-def test_assets_copied_only_once(tmp_path):
-    plugin = MapPlugin()
-    plugin.after_page_written(
-        page_cfg={"map": True},
-        html_path="/a.html",
-        output_dir=tmp_path,
-        records=[],
-        config=_config(),
-    )
-    mtime = (tmp_path / "krizky-map" / "map.js").stat().st_mtime_ns
-    plugin.after_page_written(
-        page_cfg={"map": True},
-        html_path="/b.html",
-        output_dir=tmp_path,
-        records=[],
-        config=_config(),
-    )
-    assert (tmp_path / "krizky-map" / "map.js").stat().st_mtime_ns == mtime
