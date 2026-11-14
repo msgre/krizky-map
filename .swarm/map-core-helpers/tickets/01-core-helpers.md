@@ -2,7 +2,7 @@
 id: "01"
 slug: core-helpers
 title: Přechod na core 0.2 (plugin_helpers a hook copy_plugin_assets)
-status: pending
+status: done
 depends_on: []
 files:
   - pyproject.toml
@@ -10,8 +10,8 @@ files:
   - krizky_map/plugin.py
   - tests/test_plugin.py
   - README.md
-attempts: 0
-pr: ""
+attempts: 1
+pr: "2"
 ---
 
 ## Cíl
