@@ -214,6 +214,9 @@ class MapPlugin:
             # `krizky-filters:update` (including the initial URL-driven filter).
             # Default false = view stays put on filter changes.
             "fit_on_filter": bool(map_cfg.get("fit_on_filter", False)),
+            # Zoom kolečkem myši v map_list a map_full. False = kolečko scrolluje
+            # stránku (mapa ve výpisu ho pak nezachytí). map_detail ho má vždy vypnutý.
+            "scroll_wheel_zoom": bool(map_cfg.get("scroll_wheel_zoom", True)),
             "popup": {
                 # Column shown under the title in popup bubbles (list / detail modes).
                 # Typically the place location — more useful than category when the

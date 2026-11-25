@@ -94,6 +94,11 @@ site:
     # zůstává view stabilní. 0 viditelných markerů = view se nemění.
     fit_on_filter: false
 
+    # Volitelné: zoom kolečkem myši v map_list a map_full (default true).
+    # false = kolečko scrolluje stránku a mapa ho nezachytí, zoom jen tlačítky
+    # nebo dvojklikem. map_detail má zoom kolečkem vypnutý vždy.
+    scroll_wheel_zoom: true
+
     # Padding v pixelech pro fitBounds — CSS shorthand: [top, right, bottom, left].
     # Asymetrické hodnoty posouvají obsah v mapě (např. [30, 30, 120, 30] posune
     # obsah nahoru, hodí se když má viewport dole nějaké UI). Default symetrický.
