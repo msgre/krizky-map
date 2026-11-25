@@ -103,7 +103,7 @@
       cfg = Object.assign({}, cfg, { fit_padding: padOverride });
     }
 
-    const map = L.map(el);
+    const map = L.map(el, { scrollWheelZoom: cfg.scroll_wheel_zoom !== false });
     if (initialBounds) {
       map.fitBounds(initialBounds, fitOpts(cfg, 12));
     } else {

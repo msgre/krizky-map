@@ -351,6 +351,24 @@ def test_fit_on_filter_coerces_truthy_to_bool():
     assert plugin._runtime_map_config({"fit_on_filter": ""})["fit_on_filter"] is False
 
 
+def test_scroll_wheel_zoom_default_true():
+    plugin = MapPlugin()
+    assert plugin._runtime_map_config({})["scroll_wheel_zoom"] is True
+
+
+def test_scroll_wheel_zoom_disabled():
+    plugin = MapPlugin()
+    cfg = plugin._runtime_map_config({"scroll_wheel_zoom": False})
+    assert cfg["scroll_wheel_zoom"] is False
+
+
+def test_scroll_wheel_zoom_coerces_falsy_to_bool():
+    """YAML `scroll_wheel_zoom: no` nebo prázdná hodnota → False, ne řetězec."""
+    plugin = MapPlugin()
+    assert plugin._runtime_map_config({"scroll_wheel_zoom": 0})["scroll_wheel_zoom"] is False
+    assert plugin._runtime_map_config({"scroll_wheel_zoom": ""})["scroll_wheel_zoom"] is False
+
+
 def test_fit_padding_default_symmetric():
     plugin = MapPlugin()
     assert plugin._runtime_map_config({})["fit_padding"] == [30, 30, 30, 30]
